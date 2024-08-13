@@ -20,5 +20,6 @@ let package = Package(
         .testTarget(
             name: "CommonUtilsTests",
             dependencies: ["CommonUtils"]),
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
