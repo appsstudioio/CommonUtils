@@ -1,0 +1,29 @@
+//
+//  BaseCollectionViewFlowLayout.swift
+//
+//
+//  Created by 10-N3344 on 2/15/24.
+//
+
+import UIKit
+
+/// UICollectionViewCell 최대한 왼쪽정렬시켜주는 flowLayout
+public class LeftAlignedCollectionViewFlowLayout: UICollectionViewFlowLayout {
+    public override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
+        let attributes = super.layoutAttributesForElements(in: rect)
+
+        var leftMargin = sectionInset.left
+        var maxY: CGFloat = -1.0
+        attributes?.forEach { layoutAttribute in
+            if layoutAttribute.representedElementCategory == .cell {
+                if layoutAttribute.frame.origin.y >= maxY {
+                    leftMargin = sectionInset.left
+                }
+                layoutAttribute.frame.origin.x = leftMargin
+                leftMargin += layoutAttribute.frame.width + minimumInteritemSpacing
+                maxY = max(layoutAttribute.frame.maxY, maxY)
+            }
+        }
+        return attributes
+    }
+}
