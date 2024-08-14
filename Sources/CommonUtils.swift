@@ -114,6 +114,54 @@ public class CommonUtils {
             return 0
         }
     }
+    
+    //app stroe link to production
+     static public func openAppStore(appStoreId: String) {
+        UIApplication.shared.openURL(url: "https://apps.apple.com/kr/app/id\(appStoreId)")
+    }
+
+    static public func openSetting() {
+        UIApplication.shared.openURL(url: UIApplication.openSettingsURLString)
+    }
+
+    // 앱스토어 버전 정보
+    static public func getAppStoreVersion(appStoreId: String, completion: @escaping ((String?) -> Void)) {
+         guard let url = URL(string: "https://itunes.apple.com/lookup?id=\(appStoreId)&country=kr") else {
+             completion(nil)
+             return
+         }
+         let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
+             if let data = data {
+                 do {
+                     let jsonObject = try JSONSerialization.jsonObject(with: data)
+                     guard let json = jsonObject as? [String: Any] else {
+                         DebugLog("The received that is not a Dictionary")
+                         completion(nil)
+                         return
+                     }
+                     let results = json["results"] as? [[String: Any]]
+                     let firstResult = results?.first
+                     if let currentVersion = firstResult?["version"] as? String {
+                         DebugLog("currentVersion :: \(currentVersion)")
+                         completion(currentVersion)
+                     }
+                 } catch let serializationError {
+                     DebugLog("Serialization Error: \(serializationError)")
+                     completion(nil)
+                 }
+                 return
+             } else if let error = error {
+                 DebugLog("Error: \(error.localizedDescription)")
+             } else if let response = response {
+                 DebugLog("Response: \(response)")
+             } else {
+                 DebugLog("Unknown error")
+             }
+             completion(nil)
+         }
+         task.resume()
+    }
+
 }
 
 public extension CommonUtils {

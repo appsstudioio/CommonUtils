@@ -213,6 +213,10 @@ public extension String {
     var localization: String {
         return NSLocalizedString(self, comment: "")
     }
+    
+    func localization(_ isBundle: Bool = true) -> String {
+        return (isBundle ? NSLocalizedString(self, bundle: Bundle.module, comment: "") : NSLocalizedString(self, comment: ""))
+    }
 
     var toEncoding: String {
         return self.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""

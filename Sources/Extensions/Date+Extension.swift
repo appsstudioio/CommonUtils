@@ -147,6 +147,51 @@ public extension Date {
         let nextMonth = self.toFirstDay.toMonthDate(1)!
         return nextMonth.toDayDate(-1)!
     }
+
+    var toCalculateDateString: String {
+        let nowDate = Date()
+        let components = Set<Calendar.Component>([.second, .minute, .hour, .day])
+        let differenceOfDate = Calendar(identifier: .gregorian).dateComponents(components, from: self, to: nowDate)
+        guard let day = differenceOfDate.day,
+              let hour = differenceOfDate.hour,
+              let minute = differenceOfDate.minute,
+              let second = differenceOfDate.second else { return "" }
+        if self < nowDate {
+            if day < 100 {
+                if day == 0 {
+                    if hour == 0 {
+                        if second < 60 && minute == 0 {
+                            return "방금".localization() + "전".localization()
+                        }
+                        return String(format: "%d%@", minute, ("분".localization() + "전".localization())) // n분 전
+                    } else {
+                        return String(format: "%d%@", hour, ("시간".localization() + "전".localization())) // n시간 전
+                    }
+                } else {
+                    return String(format: "%d%@", day, ("일".localization() + "전".localization()))  // n일 전
+                }
+            } else {
+                return ("오래".localization() + "전".localization())
+            }
+        } else {
+            if day < 100 {
+                if day == 0 {
+                    if hour == 0 {
+                        if second < 60 && minute == 0 {
+                            return "방금".localization() + "전".localization()
+                        }
+                        return String(format: "%d%@", minute, ("분".localization() + "후".localization())) // n분 전
+                    } else {
+                        return String(format: "%d%@", hour, ("시간".localization() + "후".localization())) // n시간 전
+                    }
+                } else {
+                    return String(format: "%d%@", day, ("일".localization() + "후".localization()))  // n일 전
+                }
+            } else {
+                return "나중에".localization()
+            }
+        }
+    }
 }
 
 // MARK: - DateFormatter
