@@ -98,3 +98,113 @@ public extension UIViewController {
         self.present(activityVC, animated: animated, completion: completion)
     }
 }
+
+public extension UIViewController {
+
+    func hideNavigationLeftButton(hidden: Bool, target: Any? = nil, action: Selector? = nil){
+        if hidden {
+            self.navigationItem.setLeftBarButton(nil, animated: true)
+        } else {
+            var backImage: UIImage? = UIImage(named: "actionbar_btn_back", in: Bundle.module, with: nil)?.withRenderingMode(.alwaysTemplate)
+            if (self.presentingViewController != nil) {
+                if navigationController?.viewControllers.count == 1 || navigationController == nil {
+                    backImage = UIImage(named: "actionbar_btn_close", in: Bundle.module, with: nil)?.withRenderingMode(.alwaysTemplate)
+                }
+            } else if navigationController?.viewControllers.count == 1 || navigationController == nil {
+                backImage = UIImage(named: "actionbar_btn_close", in: Bundle.module, with: nil)?.withRenderingMode(.alwaysTemplate)
+            }
+            
+            navigationItem.hidesBackButton = true
+            navigationItem.leftBarButtonItem = UIBarButtonItem(
+                image: backImage?.resized(to: CGSize(width: 24, height: 24)),
+                style: .plain,
+                target: target,
+                action: action
+            )
+        }
+    }
+
+    func hideNavigationRightButton(hidden: Bool,
+                                   image: UIImage? = nil,
+                                   target: Any? = nil,
+                                   action: Selector? = nil){
+        if hidden {
+            self.navigationItem.setRightBarButton(nil, animated: true)
+        } else {
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                image: image?.resized(to: CGSize(width: 24, height: 24)),
+                style: .plain,
+                target: target,
+                action: action
+            )
+        }
+    }
+
+    func hideNavigationLeftButton(hidden: Bool, button: UIButton, buttonSize: CGSize) {
+        if hidden {
+            self.navigationItem.setLeftBarButton(nil, animated: true)
+        } else {
+            button.frame = CGRectMake(0, 0, buttonSize.width, buttonSize.height)
+            navigationItem.leftBarButtonItem = UIBarButtonItem.buttonToBarButtonItem(button)
+        }
+    }
+
+    func hideNavigationRightButton(hidden: Bool, button: UIButton, buttonSize: CGSize) {
+        if hidden {
+            self.navigationItem.setRightBarButton(nil, animated: true)
+        } else {
+            button.frame = CGRectMake(0, 0, buttonSize.width, buttonSize.height)
+            navigationItem.rightBarButtonItem = UIBarButtonItem.buttonToBarButtonItem(button)
+        }
+    }
+
+    func setNavigationBarTitle(_ titleText: String = "") {
+        self.navigationItem.title = titleText
+    }
+
+    func hideNavigationBar(hidden: Bool, animate: Bool = true, titleText: String = "") {
+        hideNavigationBar(hidden: hidden, animate: animate)
+        if hidden == false && titleText != "" {
+            setNavigationBarTitle(titleText)
+        }
+    }
+
+    func hideNavigationBar(hidden: Bool, animate: Bool = true) {
+        self.navigationController?.setNavigationBarHidden(hidden, animated: animate)
+    }
+
+    func presentView(_ viewVC: UIViewController,
+                     modalStyle: UIModalPresentationStyle = .overFullScreen,
+                     animated: Bool = true) {
+        viewVC.modalPresentationStyle = modalStyle
+        self.present(viewVC, animated: animated)
+    }
+
+    func pushView(_ moveVC: UIViewController, animated: Bool = true) {
+        self.navigationController?.pushViewController(moveVC, animated: animated)
+    }
+
+    func popView(animated: Bool = true) {
+        self.navigationController?.popViewController(animated: animated)
+    }
+
+    func dismissModalView(_ animated: Bool = true) {
+        self.dismiss(animated: animated)
+    }
+
+    func dismissAllControllers(_ animated: Bool = true) {
+        guard let rootVC = UIApplication.key?.rootViewController else { return }
+        rootVC.dismiss(animated: animated, completion: nil)
+    }
+
+    @objc func moveBack(_ animated: Bool = true) {
+        if self.presentingViewController != nil {
+            if navigationController?.viewControllers.count == 1 || navigationController == nil {
+                self.dismissModalView()
+                return
+            }
+        }
+        self.popView(animated: true)
+    }
+
+}

@@ -15,6 +15,7 @@ public extension Bundle {
         case firebaseServiceFile = "FirebaseServiceFile"
         case appName = "CFBundleDisplayName"
         case appStoreID = "AppStoreID"
+        case appGroupID = "BaseAppGroupIdentifier"
     }
     
     static func getInfoPlistValue(forKey key: InfoPlistKey) -> String {
