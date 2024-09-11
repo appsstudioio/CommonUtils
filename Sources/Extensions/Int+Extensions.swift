@@ -69,6 +69,10 @@ public extension Int64 {
     var toDouble: Double {
         return Double(self)
     }
+
+    var toFileByteSting: String {
+        return NSNumber(value: self).toFileSizeString
+    }
 }
 
 public extension NSNumber {

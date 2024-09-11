@@ -161,7 +161,17 @@ public class CommonUtils {
          }
          task.resume()
     }
+    
+    static public func createUrlPath(_ hostURL: String, path: String) -> URL? {
+        var urlString = hostURL
+        if !path.hasPrefix("/") && !hostURL.hasSuffix("/") && hostURL != "" {
+            urlString += "/\(path)"
+        } else {
+            urlString += path
+        }
 
+        return URL(string: urlString)
+    }
 }
 
 public extension CommonUtils {
