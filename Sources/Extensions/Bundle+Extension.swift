@@ -22,6 +22,10 @@ public extension Bundle {
         return (self.main.infoDictionary?[key.rawValue] as? String)?.replacingOccurrences(of: "\\", with: "") ?? ""
     }
     
+    static func getInfoPlistValue(forKeyString key: String) -> String {
+        return (self.main.infoDictionary?[key] as? String)?.replacingOccurrences(of: "\\", with: "") ?? ""
+    }
+
     static func getPlistFile(fileName: String, ofType: String = "plist") -> String? {
         return self.main.path(forResource: fileName, ofType: ofType)
     }

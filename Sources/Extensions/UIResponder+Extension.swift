@@ -19,4 +19,15 @@ public extension UIResponder {
         }
         return nil
     }
+
+    @objc func openURL(_ url: URL) -> Bool {
+        var nextResponser: UIResponder = self
+        while let next = nextResponser.next {
+            nextResponser = next
+            if let application = nextResponser as? UIApplication {
+                return application.perform(#selector(openURL(_:)), with: url) != nil
+            }
+        }
+        return false
+    }
 }
