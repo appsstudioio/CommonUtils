@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import ImageIO
 
 public extension Data {
     var toJsonDic: [String: Any?]? {
@@ -22,8 +23,20 @@ public extension Data {
     }
 
     var mimeType: MimeType? {
+        if self.getImageMimeType()?.lowercased().hasSuffix("heic") ?? false {
+            return MimeType.all.filter({ $0.type == .heic }).first
+        }
         return Swime.mimeType(data: self)
     }
+
+    func getImageMimeType() -> String? {
+        guard let source = CGImageSourceCreateWithData(self as CFData, nil),
+              let type = CGImageSourceGetType(source) else {
+            return nil
+        }
+        return type as String
+    }
+
     // https://gist.github.com/siempay/1dd2af4ccc06cea2858ced27d0988c21
     var toBytes: Int64 {
         .init(self.count)
@@ -121,7 +134,7 @@ public struct Swime {
 /// let swime = Swime(data: data)
 /// swime.type
 /// ```
-public enum FileType {
+public enum FileType: String {
     case aac
     case amr
     case ar
