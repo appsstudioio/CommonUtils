@@ -11,7 +11,7 @@ public class TTSManager: NSObject, AVSpeechSynthesizerDelegate {
 
     public static let shared = TTSManager()
 
-    private let synthesizer = AVSpeechSynthesizer()
+    @MainActor private var synthesizer = AVSpeechSynthesizer()
 
     public func play(_ string: String, locale: Locale? = .current) {
         let utterance = AVSpeechUtterance(string: string)
