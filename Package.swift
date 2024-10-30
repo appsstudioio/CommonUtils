@@ -12,13 +12,28 @@ let package = Package(
             name: "CommonUtils",
             targets: ["CommonUtils"]),
     ],
+    dependencies: [
+        // 패키지 추가
+        .package(url: "https://github.com/Moya/Moya.git", .upToNextMajor(from: "15.0.0")),
+        .package(url: "https://github.com/SnapKit/SnapKit.git", .upToNextMajor(from: "5.7.0")),
+        .package(url: "https://github.com/devxoul/Then", .upToNextMajor(from: "3.0.0")),
+        .package(url: "https://github.com/relatedcode/ProgressHUD.git", .upToNextMajor(from: "14.1.3")),
+        .package(url: "https://github.com/onevcat/Kingfisher", .upToNextMajor(from: "7.12.0"))
+    ],
     targets: [
         .target(
-            name: "CommonUtils", 
+            name: "CommonUtils",
+            dependencies: [
+                "Moya",
+                "SnapKit",
+                "Then",
+                "ProgressHUD",
+                "Kingfisher"
+            ],
             resources: [.process("Resources")]),
         .testTarget(
             name: "CommonUtilsTests",
-            dependencies: ["CommonUtils"]),
+            dependencies: ["CommonUtils"])
     ],
     swiftLanguageVersions: [.v5]
 )

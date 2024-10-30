@@ -18,8 +18,7 @@ public func DebugLog(_ message: Any? = "",
                      funcName: String = #function,
                      line: Int = #line,
                      param: [String: Any] = [:]) {
-#if RELEASE
-#else
+// #if DEBUG
     let fileName: String = (file as NSString).lastPathComponent
     let fullMessage = """
     [\(fileName)] [\(funcName)] [\(line)]
@@ -51,7 +50,7 @@ public func DebugLog(_ message: Any? = "",
     } else {
         debugPrint(fullMessage)
     }
-#endif
+// #endif
 }
 
 public class CommonUtils {
@@ -171,6 +170,14 @@ public class CommonUtils {
         }
 
         return URL(string: urlString)
+    }
+
+    // 동영상의 방향을 확인하고 반환하는 함수
+    static public func fixVideoOrientation(asset: AVAsset) -> CGAffineTransform? {
+        if let videoTrack = asset.tracks(withMediaType: .video).first {
+            return videoTrack.preferredTransform
+        }
+        return nil
     }
 }
 
