@@ -25,7 +25,7 @@ public extension UIResponder {
         while let next = nextResponser.next {
             nextResponser = next
             if let application = nextResponser as? UIApplication {
-                return application.perform(#selector(openURL(_:)), with: url) != nil
+                return (application.perform(#selector(openURL(_:)), with: url) != nil)
             }
         }
         return false

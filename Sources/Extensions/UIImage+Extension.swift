@@ -80,7 +80,57 @@ public extension UIImage {
         UIGraphicsEndImageContext()
         return newImage ?? self
     }
-    
+
+    /*
+    카메라로 찍은 사진에서 방향이 다르게 저장되는 문제는 UIImage의 orientation 속성 때문입니다.
+    카메라로 촬영된 이미지는 사진의 메타데이터에 방향 정보(orientation)가 포함되는데, 이를 제대로 처리하지 않으면 사진이 잘못된 방향으로 표시될 수 있습니다.
+
+    이 문제는 특히 UIImagePickerController를 사용할 때 자주 발생합니다.
+    iOS 카메라가 사진의 원본 파일을 저장할 때, 파일 자체는 회전되지 않고, 대신 EXIF메타데이터에 사진의 방향 정보가 포함됩니다.
+    하지만 이 메타데이터를 무시하면 사진이 잘못된 방향으로 표시될 수 있습니다.
+    카메라로 찍은 이미지의 방향이 잘못된 경우, 위의 fixOrientation(image:) 메서드를 사용하여 이미지를 정상 방향으로 수정
+     */
+    func fixOrientation() -> UIImage {
+        if self.imageOrientation == .up {
+            return self
+        }
+
+        UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
+        self.draw(in: CGRect(origin: .zero, size: self.size))
+        let normalizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        return normalizedImage ?? self
+    }
+
+    func withBackgroundColor(_ backgroundColor: UIColor, borderColor: UIColor, borderWidth: CGFloat, cornerRadius: CGFloat) -> UIImage? {
+        let size = self.size
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size.width + borderWidth * 2, height: size.height + borderWidth * 2))
+
+        let imageWithBackground = renderer.image { context in
+            let rect = CGRect(origin: .zero, size: CGSize(width: size.width + borderWidth * 2, height: size.height + borderWidth * 2))
+
+            // 둥근 테두리 그리기
+            let path = UIBezierPath(roundedRect: rect.insetBy(dx: borderWidth / 2, dy: borderWidth / 2), cornerRadius: cornerRadius)
+
+            // 배경 색상 채우기 (보더 포함)
+            backgroundColor.setFill()
+            path.fill()
+
+            // 보더 색상 그리기
+            borderColor.setStroke()
+            context.cgContext.setLineWidth(borderWidth)
+            path.stroke()
+
+            // 이미지 그리기 (보더 안쪽으로 둥글게 처리된 부분)
+            let imageRect = CGRect(x: borderWidth, y: borderWidth, width: size.width, height: size.height)
+            let imagePath = UIBezierPath(roundedRect: imageRect, cornerRadius: cornerRadius - borderWidth)
+            imagePath.addClip()  // 둥근 테두리 안에만 이미지 그리기
+            self.draw(in: imageRect)
+        }
+
+        return imageWithBackground
+    }
 }
 
 // https://github.com/kiritmodi2702/GIF-Swift/blob/master/GIF-Swift/iOSDevCenters%2BGIF.swift
