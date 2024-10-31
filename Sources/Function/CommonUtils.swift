@@ -7,6 +7,12 @@ import UIKit
 import CoreTelephony
 import Photos
 import LocalAuthentication
+#if canImport(Kingfisher)
+import Kingfisher
+#endif
+#if canImport(ProgressHUD)
+import ProgressHUD
+#endif
 
 public enum DebugLogLevel: String {
     case debug, info, error, log, trace, notice, warning, critical, fault
@@ -51,6 +57,24 @@ public func DebugLog(_ message: Any? = "",
         debugPrint(fullMessage)
     }
 // #endif
+}
+
+public func showLoadingView(_ text: String? = nil, interaction: Bool = false) {
+#if canImport(ProgressHUD)
+    ProgressHUD.animate(text, interaction: interaction)
+#endif
+}
+
+public func showProgressView(_ text: String? = nil, value: CGFloat, interaction: Bool = false) {
+#if canImport(ProgressHUD)
+    ProgressHUD.progress(text, value, interaction: interaction)
+#endif
+}
+
+public func dismissLoadingView() {
+#if canImport(ProgressHUD)
+    ProgressHUD.dismiss()
+#endif
 }
 
 public class CommonUtils {
@@ -181,7 +205,163 @@ public class CommonUtils {
     }
 }
 
+// MARK: - Kingfisher, ProgressHUD Config
 public extension CommonUtils {
+
+    static public func kingfisherConfig(_ config: CommonKingfisherConfig = CommonKingfisherConfig()) {
+#if canImport(Kingfisher)
+        /* Kingfisher Image Cache config */
+        // Limit memory cache size to 200 MB.(200 * 1024 * 1024)
+        ImageCache.default.memoryStorage.config.totalCostLimit = config.memoryStorageTotalCostLimit
+        // Limit memory cache to hold 10 images at most.
+        ImageCache.default.memoryStorage.config.countLimit     = config.memoryStorageCountLimit
+        // Memory image expires after 1 minutes.
+        ImageCache.default.memoryStorage.config.expiration     = config.memoryStorageExpiration
+
+        // Limit disk cache size to 2 GB.
+        ImageCache.default.diskStorage.config.sizeLimit        = config.diskStorageSizeLimit
+        // Disk image never expires.
+        ImageCache.default.diskStorage.config.expiration       = config.diskStorageExpiration
+        // Remove only expired.
+        ImageCache.default.cleanExpiredCache {
+            DebugLog("cleanExpiredCache")
+            ImageCache.default.calculateDiskStorageSize { result in
+                switch result {
+                case .success(let size):
+                    DebugLog("======= Disk cache size: \(Double(size) / 1024 / 1024) MB")
+                case .failure(let error):
+                    DebugLog(error)
+                }
+            }
+        }
+#endif
+    }
+
+    static public func progressHUDConfig(_ config: CommonProgressHUDConfig = CommonProgressHUDConfig()) {
+#if canImport(ProgressHUD)
+        ProgressHUD.animationType = config.animationType
+        ProgressHUD.colorHUD = config.colorHUD
+        ProgressHUD.colorBackground = config.colorBackground
+        ProgressHUD.colorAnimation = config.colorAnimation
+        ProgressHUD.colorProgress = config.colorProgress
+        ProgressHUD.colorStatus = config.colorStatus
+        ProgressHUD.fontStatus = config.fontStatus
+#endif
+    }
+}
+
+public extension CommonUtils {
+
+    static public func downloadUrlImage(_ hostURL: String,
+                                        path: String,
+                                        completionHandler: @escaping (UIImage?, Data?) -> Void) {
+#if canImport(Kingfisher)
+        if let url = CommonUtils.createUrlPath(hostURL, path: path) {
+            showLoadingView()
+            ImageDownloader.default.downloadImage(with: url,
+                                                  options: []) { result in
+                dismissLoadingView()
+                switch result {
+                case .success(let value):
+                    completionHandler(value.image, value.originalData)
+                    DebugLog("Task done for: \(url)")
+                case .failure(let error):
+                    completionHandler(nil, nil)
+                    DebugLog("Job failed: \(error.localizedDescription)")
+                }
+            }
+        } else {
+            completionHandler(nil, nil)
+        }
+#else
+        completionHandler(nil, nil)
+#endif
+    }
+
+    static public func downloadUrlImages(_ hostURL: String,
+                                         paths: [String],
+                                         isFileData: Bool = false,
+                                         handler: @escaping ([UIImage]?, [Data]?) -> Void) {
+        var images: [UIImage] = []
+        var imageDatas: [Data] = []
+#if canImport(Kingfisher)
+        let waitGroup = DispatchGroup()
+        showLoadingView()
+        paths.forEach {
+            if let url = CommonUtils.createUrlPath(hostURL, path: $0) {
+                waitGroup.enter()
+
+                ImageDownloader.default.downloadImage(with: url,
+                                                      options: []) { result in
+                    switch result {
+                    case .success(let value):
+                        let mimeType = value.originalData.mimeType
+                        if mimeType?.type == .webp {
+                            if let imageData = UIImage(data: value.originalData)?.jpegData(compressionQuality: 0.9),
+                               let image = UIImage(data: imageData) {
+                                images.append(image)
+                                imageDatas.append(imageData)
+                            }
+                        } else {
+                            images.append(value.image)
+                            imageDatas.append(value.originalData)
+                        }
+                    case .failure(let error):
+                        DebugLog("Job failed: \(error.localizedDescription)")
+                    }
+                    waitGroup.leave()
+                }
+            }
+        }
+
+        waitGroup.notify(queue: .main) {
+            dismissLoadingView()
+            handler(images, imageDatas)
+        }
+#else
+        handler(images, imageDatas)
+#endif
+
+    }
+
+    static public func downLocalImages(_ paths: [String], handler: @escaping ([UIImage]?, [Data]?) -> Void) {
+        var images: [UIImage] = []
+        var imageDatas: [Data] = []
+#if canImport(Kingfisher)
+        let waitGroup = DispatchGroup()
+        showLoadingView()
+        paths.forEach { atPath in
+            if let url = URL(string: atPath) {
+                waitGroup.enter()
+                if let data = try? Data(contentsOf: url) {
+                    let mimeType = data.mimeType
+                    if mimeType?.type == .webp {
+                            // webp는 지원하지 않아 jpg로 변경해서 저장한다... 저장시 에러남..ㅠㅠ
+                        if let imageData = UIImage(data: data)?.jpegData(compressionQuality: 0.9),
+                           let image = UIImage(data: imageData) {
+                            images.append(image)
+                            imageDatas.append(imageData)
+                        }
+                    } else {
+                        if let image = UIImage(data: data) {
+                            images.append(image)
+                            imageDatas.append(data)
+                        }
+                    }
+                    waitGroup.leave()
+                }
+            }
+        }
+
+        waitGroup.notify(queue: .main) {
+            dismissLoadingView()
+            handler(images, imageDatas)
+        }
+#else
+        handler(images, imageDatas)
+#endif
+    }
+
     static func photoLibraryPermissionCheck(isReadFlag: Bool, callBack: @escaping (Bool, PHAuthorizationStatus?) -> Void) {
         if #available(iOS 14, *) {
             PHPhotoLibrary.requestAuthorization(for: (isReadFlag ? .readWrite : .addOnly) ) { authorizationStatus in
@@ -250,7 +430,7 @@ public extension CommonUtils {
 
         LAContext().evaluatePolicy(policy, localizedReason: reason) { (res, err) in
 //            if let error = err {
-//                DLog("evaluatePolicy Error: \(error ?? "") :: \(error.localizedDescription)")
+//                DebugLog("evaluatePolicy Error: \(error ?? "") :: \(error.localizedDescription)")
 //            }
             DispatchQueue.main.async {
                 completion(res)
