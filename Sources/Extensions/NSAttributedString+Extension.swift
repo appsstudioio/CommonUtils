@@ -140,6 +140,7 @@ public extension NSAttributedString {
         return ceil(boundingBox.height)
 
     }
+
     // https://stackoverflow.com/questions/54497598/nsattributedstring-boundingrect-returns-wrong-height
     func sizeFittingWidth(_ w: CGFloat) -> CGSize {
         let textStorage = NSTextStorage(attributedString: self)
@@ -156,5 +157,12 @@ public extension NSAttributedString {
         layoutManager.glyphRange(forBoundingRect: boundingRect, in: textContainer)
         let rect = layoutManager.usedRect(for: textContainer)
         return rect.integral.size
+    }
+
+    func getBoxSizeAndLineCnt(maxWidth: CGFloat, fontSize: UIFont) -> (CGSize, Int) {
+        let size = self.sizeFittingWidth(maxWidth)
+        let height = size.height
+        let lineCnt = Int(lroundf(Float(height / fontSize.lineHeight)))
+        return (size, lineCnt)
     }
 }

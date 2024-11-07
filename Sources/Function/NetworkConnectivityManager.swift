@@ -11,7 +11,7 @@ import UIKit
 
 public typealias NetworkStatusCode = NetworkReachabilityManager.NetworkReachabilityStatus
 public class NetworkConnectivityManager {
-    private let reachabilityManager = NetworkReachabilityManager()
+    private let reachabilityManager = NetworkReachabilityManager.default
     private var cancellables = Set<AnyCancellable>()
 
     // 네트워크 상태를 외부로 알리기 위한 Publisher
