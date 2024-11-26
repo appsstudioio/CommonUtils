@@ -160,9 +160,9 @@ public extension NSAttributedString {
     }
 
     func getBoxSizeAndLineCnt(maxWidth: CGFloat, fontSize: UIFont) -> (CGSize, Int) {
-        let size = self.sizeFittingWidth(maxWidth)
+        let size = self.sizeFittingWidth(maxWidth) ?? CGSize(width: maxWidth, height: fontSize.lineHeight)
         let height = size.height
-        let lineCnt = Int(lroundf(Float(height / fontSize.lineHeight)))
+        let lineCnt = Int(lroundf(Float(height / fontSize.lineHeight))) ?? 1
         return (size, lineCnt)
     }
 }

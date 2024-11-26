@@ -14,7 +14,7 @@ public extension UIDevice {
     static var deviceIdentifier: String? {
         return current.identifierForVendor?.uuidString
     }
-    
+
     static func vibrate() {
         DispatchQueue.main.async {
             AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
