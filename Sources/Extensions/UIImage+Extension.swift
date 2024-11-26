@@ -171,25 +171,23 @@ public extension UIImage {
     class func delayForImageAtIndex(_ index: Int, source: CGImageSource!) -> Double {
         var delay = 0.1
 
-        let cfProperties = CGImageSourceCopyPropertiesAtIndex(source, index, nil)
-        let gifProperties: CFDictionary = unsafeBitCast(
-            CFDictionaryGetValue(cfProperties,
-                Unmanaged.passUnretained(kCGImagePropertyGIFDictionary).toOpaque()),
-            to: CFDictionary.self)
-
-        var delayObject: AnyObject = unsafeBitCast(
-            CFDictionaryGetValue(gifProperties,
-                Unmanaged.passUnretained(kCGImagePropertyGIFUnclampedDelayTime).toOpaque()),
-            to: AnyObject.self)
-        if delayObject.doubleValue == 0 {
-            delayObject = unsafeBitCast(CFDictionaryGetValue(gifProperties,
-                Unmanaged.passUnretained(kCGImagePropertyGIFDelayTime).toOpaque()), to: AnyObject.self)
+        guard let cfProperties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [String: Any],
+              let gifProperties = cfProperties[kCGImagePropertyGIFDictionary as String] as? [String: Any] else {
+            DebugLog("Failed to retrieve GIF properties for index \(index). Using default delay.")
+            return delay
         }
 
-        delay = delayObject as! Double
+        // Unclamped delay time
+        if let unclampedDelay = gifProperties[kCGImagePropertyGIFUnclampedDelayTime as String] as? Double {
+            delay = unclampedDelay
+        } else if let clampedDelay = gifProperties[kCGImagePropertyGIFDelayTime as String] as? Double {
+            delay = clampedDelay
+        } else {
+            DebugLog("No valid delay time found for index \(index). Using default delay.")
+        }
 
         if delay < 0.1 {
-            delay = 0.1
+            delay = 0.1 // Minimum delay to prevent infinite loops or very fast animations
         }
 
         return delay
@@ -242,46 +240,48 @@ public extension UIImage {
 
     class func animatedImageWithSource(_ source: CGImageSource) -> UIImage? {
         let count = CGImageSourceGetCount(source)
+        // CGImageSource가 유효하지 않을 경우 CGImageSourceGetCount에서 유효하지 않은 값(예: 0)을 반환하거나,
+        // 이후 이미지 생성 시 nil을 반환할 수 있습니다. 이를 확인하려면 source가 nil인지 또는 이미지 개수가 0인지 확인해야 합니다.
+        guard count > 0 else {
+            DebugLog("Invalid image source or no images found.")
+            return nil
+        }
+
         var images = [CGImage]()
         var delays = [Int]()
 
         for i in 0..<count {
             if let image = CGImageSourceCreateImageAtIndex(source, i, nil) {
                 images.append(image)
+            } else {
+                DebugLog("Failed to create image at index \(i).")
+                continue
             }
 
-            let delaySeconds = UIImage.delayForImageAtIndex(Int(i),
-                source: source)
-            delays.append(Int(delaySeconds * 1000.0)) // Seconds to ms
+            let delaySeconds = UIImage.delayForImageAtIndex(i, source: source)
+            if delaySeconds >= 0 {
+                delays.append(Int(delaySeconds * 1000.0))
+            } else {
+                DebugLog("Invalid delay for frame \(i). Using default of 100 ms.")
+                delays.append(100)
+            }
         }
 
-        let duration: Int = {
-            var sum = 0
+        guard !images.isEmpty, !delays.isEmpty else {
+            DebugLog("No valid frames or delays.")
+            return nil
+        }
 
-            for val: Int in delays {
-                sum += val
-            }
-
-            return sum
-        }()
-
+        let duration: Int = delays.reduce(0, +)
         let gcd = gcdForArray(delays)
         var frames = [UIImage]()
 
-        var frame: UIImage
-        var frameCount: Int
-        for i in 0..<count {
-            frame = UIImage(cgImage: images[Int(i)])
-            frameCount = Int(delays[Int(i)] / gcd)
-
-            for _ in 0..<frameCount {
-                frames.append(frame)
-            }
+        for i in 0..<images.count {
+            let frame = UIImage(cgImage: images[i])
+            let frameCount = delays[i] / gcd
+            frames.append(contentsOf: Array(repeating: frame, count: frameCount))
         }
 
-        let animation = UIImage.animatedImage(with: frames,
-            duration: Double(duration) / 1000.0)
-
-        return animation
+        return UIImage.animatedImage(with: frames, duration: Double(duration) / 1000.0)
     }
 }
