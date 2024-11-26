@@ -18,7 +18,7 @@ let package = Package(
         .package(url: "https://github.com/SnapKit/SnapKit.git", .upToNextMajor(from: "5.7.0")),
         .package(url: "https://github.com/devxoul/Then", .upToNextMajor(from: "3.0.0")),
         .package(url: "https://github.com/relatedcode/ProgressHUD.git", .upToNextMajor(from: "14.1.3")),
-        .package(url: "https://github.com/onevcat/Kingfisher", .upToNextMajor(from: "7.12.0"))
+        .package(url: "https://github.com/onevcat/Kingfisher", .upToNextMajor(from: "8.1.0"))
     ],
     targets: [
         .target(

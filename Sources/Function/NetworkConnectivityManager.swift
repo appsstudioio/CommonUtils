@@ -11,9 +11,8 @@ import UIKit
 
 public typealias NetworkStatusCode = NetworkReachabilityManager.NetworkReachabilityStatus
 public class NetworkConnectivityManager {
-    private let reachabilityManager = NetworkReachabilityManager()
     private var cancellables = Set<AnyCancellable>()
-
+    private let networkReachabilityManager = NetworkReachabilityManager.default
     // 네트워크 상태를 외부로 알리기 위한 Publisher
     private let networkStatusSubject = PassthroughSubject<NetworkStatusCode, Never>()
     public var networkStatusPublisher: AnyPublisher<NetworkStatusCode, Never> {
@@ -40,7 +39,7 @@ public class NetworkConnectivityManager {
 
     // 네트워크 모니터링 시작
     public func startMonitoring() {
-        reachabilityManager?.startListening { [weak self] status in
+        networkReachabilityManager?.startListening { [weak self] status in
             guard let self = self else { return }
 
             DispatchQueue.main.async {
@@ -62,6 +61,6 @@ public class NetworkConnectivityManager {
 
     // 네트워크 모니터링 중단
     public func stopMonitoring() {
-        reachabilityManager?.stopListening()
+        networkReachabilityManager?.stopListening()
     }
 }
