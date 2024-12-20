@@ -133,155 +133,66 @@ public extension UIImage {
     }
 }
 
-// https://github.com/kiritmodi2702/GIF-Swift/blob/master/GIF-Swift/iOSDevCenters%2BGIF.swift
 public extension UIImage {
-
-    class func gifImageWithData(_ data: Data) -> UIImage? {
+    /// GIF 이미지 데이터를 UIImage로 변환하는 메서드
+    /// - Parameter data: GIF 이미지 데이터
+    /// - Returns: 첫 번째 프레임의 UIImage 또는 nil
+    static func fromGifData(_ data: Data) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-            DebugLog("image doesn't exist")
             return nil
         }
 
-        return UIImage.animatedImageWithSource(source)
-    }
-
-    class func gifImageWithURL(_ gifUrl:String) -> UIImage? {
-        guard let bundleURL = URL(string: gifUrl),
-                let imageData = try? Data(contentsOf: bundleURL) else {
-            DebugLog("image named \"\(gifUrl)\" into NSData")
-            return nil
-        }
-        return gifImageWithData(imageData)
-    }
-
-    class func gifImageWithName(_ name: String) -> UIImage? {
-        guard let bundleURL = Bundle.main
-            .url(forResource: name, withExtension: "gif") else {
-            DebugLog("SwiftGif: This image named \"\(name)\" does not exist")
-                return nil
-        }
-        guard let imageData = try? Data(contentsOf: bundleURL) else {
-            DebugLog("SwiftGif: Cannot turn image named \"\(name)\" into NSData")
+        let imageCount = CGImageSourceGetCount(source)
+        guard imageCount > 0 else {
             return nil
         }
 
-        return gifImageWithData(imageData)
-    }
-
-    class func delayForImageAtIndex(_ index: Int, source: CGImageSource!) -> Double {
-        var delay = 0.1
-
-        guard let cfProperties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [String: Any],
-              let gifProperties = cfProperties[kCGImagePropertyGIFDictionary as String] as? [String: Any] else {
-            DebugLog("Failed to retrieve GIF properties for index \(index). Using default delay.")
-            return delay
-        }
-
-        // Unclamped delay time
-        if let unclampedDelay = gifProperties[kCGImagePropertyGIFUnclampedDelayTime as String] as? Double {
-            delay = unclampedDelay
-        } else if let clampedDelay = gifProperties[kCGImagePropertyGIFDelayTime as String] as? Double {
-            delay = clampedDelay
-        } else {
-            DebugLog("No valid delay time found for index \(index). Using default delay.")
-        }
-
-        if delay < 0.1 {
-            delay = 0.1 // Minimum delay to prevent infinite loops or very fast animations
-        }
-
-        return delay
-    }
-
-    class func gcdForPair(_ ia: Int?, _ ib: Int?) -> Int {
-        guard let ia = ia, let ib = ib else {
-            if ib != nil {
-                return ib ?? 0
-            } else if ia != nil {
-                return ia ?? 0
-            } else {
-                return 0
-            }
-        }
-        var a = ia
-        var b = ib
-
-        if a < b {
-            let c = a
-            a = b
-            b = c
-        }
-
-        var rest: Int
-        while true {
-            rest = a % b
-            if rest == 0 {
-                return b
-            } else {
-                a = b
-                b = rest
-            }
-        }
-    }
-
-    class func gcdForArray(_ array: Array<Int>) -> Int {
-        if array.isEmpty {
-            return 1
-        }
-
-        var gcd = array[0]
-
-        for val in array {
-            gcd = UIImage.gcdForPair(val, gcd)
-        }
-
-        return gcd
-    }
-
-    class func animatedImageWithSource(_ source: CGImageSource) -> UIImage? {
-        let count = CGImageSourceGetCount(source)
-        // CGImageSource가 유효하지 않을 경우 CGImageSourceGetCount에서 유효하지 않은 값(예: 0)을 반환하거나,
-        // 이후 이미지 생성 시 nil을 반환할 수 있습니다. 이를 확인하려면 source가 nil인지 또는 이미지 개수가 0인지 확인해야 합니다.
-        guard count > 0 else {
-            DebugLog("Invalid image source or no images found.")
+        // 첫 번째 프레임 가져오기
+        guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             return nil
         }
 
-        var images = [CGImage]()
-        var delays = [Int]()
+        return UIImage(cgImage: cgImage)
+    }
 
-        for i in 0..<count {
-            if let image = CGImageSourceCreateImageAtIndex(source, i, nil) {
-                images.append(image)
-            } else {
-                DebugLog("Failed to create image at index \(i).")
+    /// GIF 이미지 데이터를 애니메이션 UIImage로 변환하는 메서드
+    /// - Parameters:
+    ///   - data: GIF 이미지 데이터
+    ///   - scale: 이미지 스케일 (기본값: 화면의 스케일)
+    /// - Returns: 애니메이션 UIImage 또는 nil
+    static func animatedImageFromGifData(_ data: Data, scale: CGFloat = UIScreen.main.scale) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            return nil
+        }
+
+        let imageCount = CGImageSourceGetCount(source)
+        guard imageCount > 0 else {
+            return nil
+        }
+
+        var images: [UIImage] = []
+        var duration: TimeInterval = 0
+
+        for index in 0..<imageCount {
+            // CGImage 생성
+            guard let cgImage = CGImageSourceCreateImageAtIndex(source, index, nil) else {
                 continue
             }
 
-            let delaySeconds = UIImage.delayForImageAtIndex(i, source: source)
-            if delaySeconds >= 0 {
-                delays.append(Int(delaySeconds * 1000.0))
-            } else {
-                DebugLog("Invalid delay for frame \(i). Using default of 100 ms.")
-                delays.append(100)
+            // 각 프레임의 지속 시간 가져오기
+            guard let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [String: Any],
+                  let gifProperties = properties[kCGImagePropertyGIFDictionary as String] as? [String: Any] else {
+                continue
             }
+
+            let frameDuration = gifProperties[kCGImagePropertyGIFDelayTime as String] as? TimeInterval ?? 0.1
+            duration += frameDuration
+
+            // UIImage 생성
+            let uiImage = UIImage(cgImage: cgImage, scale: scale, orientation: .up)
+            images.append(uiImage)
         }
 
-        guard !images.isEmpty, !delays.isEmpty else {
-            DebugLog("No valid frames or delays.")
-            return nil
-        }
-
-        let duration: Int = delays.reduce(0, +)
-        let gcd = gcdForArray(delays)
-        var frames = [UIImage]()
-
-        for i in 0..<images.count {
-            let frame = UIImage(cgImage: images[i])
-            let frameCount = delays[i] / gcd
-            frames.append(contentsOf: Array(repeating: frame, count: frameCount))
-        }
-
-        return UIImage.animatedImage(with: frames, duration: Double(duration) / 1000.0)
+        return UIImage.animatedImage(with: images, duration: duration)
     }
 }

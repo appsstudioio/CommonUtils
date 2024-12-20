@@ -138,14 +138,16 @@ public extension String {
     var html2MutableAttributed: NSMutableAttributedString? {
         do {
             guard let data = self.data(using: .utf8) else {
+                DebugLog("Error creating attributed string: \(self)")
                 return nil
             }
             
-            return try NSMutableAttributedString(data: data,
+            return try? NSMutableAttributedString(data: data,
                                                  options: [.documentType: NSMutableAttributedString.DocumentType.html,
                                                            .characterEncoding: String.Encoding.utf8.rawValue],
                                                  documentAttributes: nil)
         } catch {
+            DebugLog("Error creating attributed string: \(error.localizedDescription)")
             return nil
         }
     }
@@ -156,11 +158,11 @@ public extension String {
             return self
         }
         do {
-            let attributed = try NSAttributedString(data: encodedData,
+            let attributed = try? NSAttributedString(data: encodedData,
                                                     options: [ .documentType: NSAttributedString.DocumentType.html,
                                                                .characterEncoding: String.Encoding.utf8.rawValue],
                                                     documentAttributes: nil)
-            return attributed.string
+            return attributed?.string ?? self
         } catch {
             return self
         }
@@ -233,6 +235,8 @@ public extension String {
 
 public extension Character {
     var isEmoji: Bool {
-        return self.unicodeScalars.first?.properties.isEmoji == true
+        guard let scalar = self.unicodeScalars.first else { return false }
+        // "1"은 유니코드 스칼라에서 이모티콘으로 간주되는 특성이 있음, 숫자(0-9), #, *와 같은 텍스트 기반 유니코드 심볼을 무시 (0x238C)
+        return scalar.properties.isEmoji && (scalar.properties.isEmojiPresentation || scalar.value > 0x238C)
     }
 }
