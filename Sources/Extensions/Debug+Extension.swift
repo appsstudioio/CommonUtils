@@ -54,24 +54,3 @@ public extension Encodable {
         }
     }
 }
-
-public extension String {
-    func debugLog(showTime: Bool = true, file: String = #file, funcName: String = #function, line: Int = #line) {
-#if RELEASE
-#else
-        let fileName: String = (file as NSString).lastPathComponent
-        var fullMessage = "[\(fileName)] [\(funcName) (\(line))]\n-> \(self)\n"
-
-        if true == showTime {
-            let dateFormatter = DateFormatter()
-            dateFormatter.locale = Locale.current
-            dateFormatter.dateFormat = "MM.dd KK:mm:ss.SSS"
-            let timeStr = dateFormatter.string(from: Date())
-            fullMessage = "\(timeStr): " + fullMessage
-        }
-        fullMessage += "\n"
-
-        print(fullMessage)
-#endif
-    }
-}

@@ -13,7 +13,7 @@ public extension Data {
         do {
             return try JSONSerialization.jsonObject(with: self, options: []) as? [String: Any?]
         } catch {
-            DebugLog("!!!! toJsonDic Error :: \(error.localizedDescription)")
+            DebugLog("!!!! toJsonDic Error :: \(error.localizedDescription)", level: .error)
             return nil
         }
     }

@@ -14,14 +14,13 @@ public extension CALayer {
                     x offsetX: CGFloat = 0,
                     y offsetY: CGFloat = 10,
                     blur: CGFloat = 40,
-                    spread: CGFloat = 0) {
+                    spread: CGFloat = 0,
+                    opacity: Float = 1) {
         shadowColor = color.cgColor
-        shadowOpacity = 1
+        shadowOpacity = opacity
         shadowOffset = CGSize(width: offsetX, height: offsetY)
-        shadowRadius = blur / 2
-        if spread == 0 {
-            shadowPath = nil
-        } else {
+        shadowRadius = blur
+        if spread > 0 {
             let rect = bounds.insetBy(dx: -spread, dy: -spread)
             shadowPath = UIBezierPath(rect: rect).cgPath
         }

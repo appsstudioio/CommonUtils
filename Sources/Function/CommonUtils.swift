@@ -61,13 +61,17 @@ public func DebugLog(_ message: Any? = "",
 
 public func showLoadingView(_ text: String? = nil, interaction: Bool = false) {
 #if canImport(ProgressHUD)
-    ProgressHUD.animate(text, interaction: interaction)
+    UIView.performWithoutAnimation {
+        ProgressHUD.animate(text, interaction: interaction)
+    }
 #endif
 }
 
 public func showProgressView(_ text: String? = nil, value: CGFloat, interaction: Bool = false) {
 #if canImport(ProgressHUD)
-    ProgressHUD.progress(text, value, interaction: interaction)
+    UIView.performWithoutAnimation {
+        ProgressHUD.progress(text, value, interaction: interaction)
+    }
 #endif
 }
 
