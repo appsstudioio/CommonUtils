@@ -33,6 +33,10 @@ public extension Int {
         return Double(self)
     }
 
+    var toCGFloat: CGFloat {
+        return CGFloat(self)
+    }
+    
     var unixtimeToDate: Date {
         return Date(timeIntervalSince1970: TimeInterval((self / 1000)))
     }

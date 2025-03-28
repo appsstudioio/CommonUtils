@@ -81,6 +81,15 @@ public extension UIImage {
         return newImage ?? self
     }
 
+    // MARK: Image 에 Alpha 값 적용
+    func imageWithAlpha(alpha: CGFloat) -> UIImage? {
+        UIGraphicsBeginImageContextWithOptions(size, false, scale)
+        draw(at: .zero, blendMode: .normal, alpha: alpha)
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return newImage
+    }
+
     /*
     카메라로 찍은 사진에서 방향이 다르게 저장되는 문제는 UIImage의 orientation 속성 때문입니다.
     카메라로 촬영된 이미지는 사진의 메타데이터에 방향 정보(orientation)가 포함되는데, 이를 제대로 처리하지 않으면 사진이 잘못된 방향으로 표시될 수 있습니다.
@@ -130,6 +139,77 @@ public extension UIImage {
         }
 
         return imageWithBackground
+    }
+
+    // MARK: 이미지 돌아갔을 경우 원복
+    func fixedOrientation() -> UIImage {
+        // 정상일 경우
+        if (imageOrientation == Orientation.up) {
+            return self
+        }
+
+        // We need to calculate the proper transformation to make the image upright.
+        // We do it in 2 steps: Rotate if Left/Right/Down, and then flip if Mirrored.
+        var transform:CGAffineTransform = CGAffineTransform.identity
+
+        if (imageOrientation == Orientation.down || imageOrientation == Orientation.downMirrored) {
+            transform = transform.translatedBy(x: size.width, y: size.height)
+            transform = transform.rotated(by: CGFloat.pi)
+        }
+
+        if (imageOrientation == Orientation.left
+            || imageOrientation == Orientation.leftMirrored) {
+
+            transform = transform.translatedBy(x: size.width, y: 0)
+            transform = transform.rotated(by: CGFloat.pi / 2)
+        }
+
+        if (imageOrientation == Orientation.right
+            || imageOrientation == Orientation.rightMirrored) {
+
+            transform = transform.translatedBy(x: 0, y: size.height);
+            transform = transform.rotated(by: -CGFloat.pi / 2);
+        }
+
+        if (imageOrientation == Orientation.upMirrored
+            || imageOrientation == Orientation.downMirrored) {
+
+            transform = transform.translatedBy(x: size.width, y: 0)
+            transform = transform.scaledBy(x: -1, y: 1)
+        }
+
+        if (imageOrientation == Orientation.leftMirrored
+            || imageOrientation == Orientation.rightMirrored) {
+
+            transform = transform.translatedBy(x: size.height, y: 0);
+            transform = transform.scaledBy(x: -1, y: 1);
+        }
+
+        // Now we draw the underlying CGImage into a new context, applying the transform
+        // calculated above.
+        let ctx:CGContext = CGContext(data: nil, width: Int(size.width), height: Int(size.height),
+                                      bitsPerComponent: cgImage!.bitsPerComponent, bytesPerRow: 0,
+                                      space: cgImage!.colorSpace!,
+                                      bitmapInfo: cgImage!.bitmapInfo.rawValue)!
+
+        ctx.concatenate(transform)
+
+        if (imageOrientation == Orientation.left
+            || imageOrientation == Orientation.leftMirrored
+            || imageOrientation == Orientation.right
+            || imageOrientation == Orientation.rightMirrored
+        ) {
+
+            ctx.draw(cgImage!, in: CGRect(x:0,y:0,width:size.height,height:size.width))
+        } else {
+            ctx.draw(cgImage!, in: CGRect(x:0,y:0,width:size.width,height:size.height))
+        }
+
+        // And now we just create a new UIImage from the drawing context
+        let cgimg:CGImage = ctx.makeImage()!
+        let imgEnd:UIImage = UIImage(cgImage: cgimg)
+
+        return imgEnd
     }
 }
 

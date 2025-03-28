@@ -27,7 +27,7 @@ public func DebugLog(_ message: Any? = "",
 // #if DEBUG
     let fileName: String = (file as NSString).lastPathComponent
     let fullMessage = """
-    [\(fileName)] [\(funcName)] [\(line)]
+    [파일: \(fileName), 라인: \(line), 함수: \(funcName)]
     \(message ?? "")
     """
     if #available(iOS 14.0, *) {
@@ -61,17 +61,13 @@ public func DebugLog(_ message: Any? = "",
 
 public func showLoadingView(_ text: String? = nil, interaction: Bool = false) {
 #if canImport(ProgressHUD)
-    UIView.performWithoutAnimation {
-        ProgressHUD.animate(text, interaction: interaction)
-    }
+    ProgressHUD.animate(text, interaction: interaction)
 #endif
 }
 
 public func showProgressView(_ text: String? = nil, value: CGFloat, interaction: Bool = false) {
 #if canImport(ProgressHUD)
-    UIView.performWithoutAnimation {
-        ProgressHUD.progress(text, value, interaction: interaction)
-    }
+    ProgressHUD.progress(text, value, interaction: interaction)
 #endif
 }
 
@@ -82,6 +78,7 @@ public func dismissLoadingView() {
 }
 
 public class CommonUtils {
+
     static public func getAppVersion() -> String {
         return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     }
@@ -469,5 +466,77 @@ public extension CommonUtils {
         }
 
         return remoteDic
+    }
+
+    static func compressVideo(inputURL: URL, presetName: String, completion: @escaping (URL?, Error?) -> Void) {
+        // 1. 먼저 비디오 파일이 유효한지 확인
+        let asset = AVURLAsset(url: inputURL, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
+
+        // 2. 비디오 트랙 확인
+        let videoTracks = asset.tracks(withMediaType: .video)
+        guard !videoTracks.isEmpty else {
+            DebugLog("비디오 트랙이 없습니다.")
+            completion(nil, NSError(domain: "VideoCompression", code: -1, userInfo: [NSLocalizedDescriptionKey: "비디오 트랙이 없습니다."]))
+            return
+        }
+
+        // 3. 비디오 정보 로깅
+        if let videoTrack = videoTracks.first {
+            let naturalSize = videoTrack.naturalSize
+            let bitRate = videoTrack.estimatedDataRate
+            DebugLog("원본 비디오 정보: 크기 \(naturalSize), 비트레이트 \(bitRate)")
+        }
+
+        // 4. 사용 가능한 프리셋 확인
+        let compatiblePresets = AVAssetExportSession.exportPresets(compatibleWith: asset)
+        if !compatiblePresets.contains(presetName) {
+            DebugLog("비디오 형식에 맞지 않는 프리셋: \(presetName)")
+            // 대체 프리셋 사용 시도
+            let alternatePreset = compatiblePresets.contains(AVAssetExportPreset640x480) ?
+            AVAssetExportPreset640x480 : AVAssetExportPresetLowQuality
+            DebugLog("대체 프리셋으로 시도: \(alternatePreset)")
+
+            // 재귀적으로 다른 프리셋으로 시도
+            compressVideo(inputURL: inputURL, presetName: alternatePreset, completion: completion)
+            return
+        }
+
+        // 5. 고유한 출력 파일 이름 생성
+        let originalFileName = inputURL.deletingPathExtension().lastPathComponent // ✅ 기존 파일명 유지
+        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(originalFileName).mp4")
+
+        // 6. 기존 파일이 있다면 제거
+        if FileManager.default.fileExists(atPath: outputURL.path) {
+            try? FileManager.default.removeItem(at: outputURL)
+        }
+
+        // 7. 내보내기 세션 설정
+        guard let exportSession = AVAssetExportSession(asset: asset, presetName: presetName) else {
+            completion(nil, NSError(domain: "VideoCompression", code: -1, userInfo: [NSLocalizedDescriptionKey: "내보내기 세션을 생성할 수 없습니다."]))
+            return
+        }
+
+        exportSession.outputURL = outputURL
+        exportSession.outputFileType = .mp4
+        exportSession.shouldOptimizeForNetworkUse = true
+
+        DispatchQueue.global(qos: .utility).async {
+            exportSession.exportAsynchronously {
+                DispatchQueue.main.async {
+                    if exportSession.status == .completed {
+                        DebugLog("비디오 압축 성공: \(outputURL.path)")
+                        completion(outputURL, nil)
+                    } else {
+                        // 10. 상세한 오류 정보 확인
+                        let errorDetails = exportSession.error?.localizedDescription ?? "Unknown error"
+                        let errorCode = (exportSession.error as NSError?)?.code ?? -1
+                        let errorDomain = (exportSession.error as NSError?)?.domain ?? "Unknown"
+
+                        DebugLog("비디오 압축 실패: \(errorDetails), 코드: \(errorCode), 도메인: \(errorDomain)")
+                        completion(nil, exportSession.error)
+                    }
+                }
+            }
+        }
     }
 }

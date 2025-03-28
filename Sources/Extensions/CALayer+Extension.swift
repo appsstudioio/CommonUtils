@@ -20,10 +20,14 @@ public extension CALayer {
         shadowOpacity = opacity
         shadowOffset = CGSize(width: offsetX, height: offsetY)
         shadowRadius = blur
+        // 항상 shadowPath를 설정하여 성능 최적화
+        let shadowRect: CGRect
         if spread > 0 {
-            let rect = bounds.insetBy(dx: -spread, dy: -spread)
-            shadowPath = UIBezierPath(rect: rect).cgPath
+            shadowRect = bounds.insetBy(dx: -spread, dy: -spread)
+        } else {
+            shadowRect = bounds
         }
+        shadowPath = UIBezierPath(rect: shadowRect).cgPath
     }
 
     // https://ios-development.tistory.com/841
