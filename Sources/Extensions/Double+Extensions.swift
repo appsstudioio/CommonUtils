@@ -36,3 +36,39 @@ public extension Double {
         return String(format: "%d:%02d", minutes, seconds)
     }
 }
+
+public extension CGFloat {
+    var toDouble: Double {
+        return Double(self)
+    }
+
+    var toFloat: Float {
+        return Float(self)
+    }
+    
+    var toInt: Int {
+        return Int(self)
+    }
+
+    var toInt64: Int64 {
+        return Int64(self)
+    }
+}
+
+public extension Float {
+    var toCGFLoat: CGFloat {
+        return CGFloat(self)
+    }
+
+    var toDouble: Double {
+        return Double(self)
+    }
+
+    var toInt: Int {
+        return Int(self)
+    }
+
+    var toInt64: Int64 {
+        return Int64(self)
+    }
+}

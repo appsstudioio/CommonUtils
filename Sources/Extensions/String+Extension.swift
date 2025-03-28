@@ -231,6 +231,72 @@ public extension String {
         }
         return pureNumber
     }
+
+    // UTF-16 기반의 실제 커서 위치를 계산하는 방법
+    var utf16Count: Int {
+        return utf16.count
+    }
+
+    // NSString을 사용한 길이 계산
+    var length: Int {
+        return (self as NSString).length
+    }
+
+    var isNumeric : Bool {
+        return NumberFormatter().number(from: self) != nil
+    }
+
+    func decodeUtf8() -> String {
+        let encodedString = self.replacingOccurrences(of: "+", with: "%20")
+        let decodedString = encodedString.removingPercentEncoding
+        return decodedString ?? self
+    }
+
+    func encodeUtf8() -> String {
+        let encodeString = self.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+        return encodeString ?? self
+    }
+
+    /// 텍스트를 이미지로 변환하는 함수
+    /// - Parameters:
+    ///   - font: 텍스트에 사용할 폰트
+    ///   - textColor: 텍스트 색상
+    ///   - backgroundColor: 배경 색상 (기본값: 투명)
+    ///   - size: 생성할 이미지의 크기
+    /// - Returns: 변환된 UIImage
+    func toImage(
+        font: UIFont,
+        textColor: UIColor,
+        backgroundColor: UIColor = .clear,
+        size: CGSize
+    ) -> UIImage? {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { context in
+            // 배경 색상 설정
+            if backgroundColor != .clear {
+                context.cgContext.setFillColor(backgroundColor.cgColor)
+                context.cgContext.fill(CGRect(origin: .zero, size: size))
+            }
+
+            // 텍스트 속성 설정
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: textColor
+            ]
+
+            // 텍스트 크기 계산
+            let textSize = self.size(withAttributes: attributes)
+
+            // 텍스트를 이미지 중앙에 위치시키기
+            let textRect = CGRect(
+                x: (size.width - textSize.width) / 2,
+                y: (size.height - textSize.height) / 2,
+                width: textSize.width,
+                height: textSize.height
+            )
+            self.draw(in: textRect, withAttributes: attributes)
+        }
+    }
 }
 
 public extension Character {
