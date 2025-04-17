@@ -2,7 +2,7 @@
 //  Data+Extension.swift
 //
 //
-//  Created by 10-N3344 on 8/12/24.
+// Created by Dongju Lim on 8/12/24.
 //
 
 import Foundation
@@ -42,16 +42,16 @@ public extension Data {
         .init(self.count)
     }
 
-    var kilobytes: Double {
+    var toKilobytes: Double {
         return Double(toBytes) / 1_024
     }
 
-    var megabytes: Double {
-        return kilobytes / 1_024
+    var toMegabytes: Double {
+        return toKilobytes / 1_024
     }
 
-    var gigabytes: Double {
-        return megabytes / 1_024
+    var toGigabytes: Double {
+        return toMegabytes / 1_024
     }
 
     func getReadableUnit() -> String {
@@ -60,11 +60,11 @@ public extension Data {
             case 0..<1_024:
                 return "\(bytes)B" // bytes
             case 1_024..<(1_024 * 1_024):
-                return "\(String(format: "%4.2f", kilobytes))KB"
+                return "\(String(format: "%4.2f", toKilobytes))KB"
             case 1_024..<(1_024 * 1_024 * 1_024):
-                return "\(String(format: "%4.2f", megabytes))MB"
+                return "\(String(format: "%4.2f", toMegabytes))MB"
             case (1_024 * 1_024 * 1_024)...Int64.max:
-                return "\(String(format: "%.2f", gigabytes))GB"
+                return "\(String(format: "%.2f", toGigabytes))GB"
             default:
                 return "\(bytes)B"
         }

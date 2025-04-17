@@ -2,7 +2,7 @@
 //  Array+Extension.swift
 //
 //
-//  Created by 10-N3344 on 8/12/24.
+// Created by Dongju Lim on 8/12/24.
 //
 
 import Foundation
@@ -17,6 +17,7 @@ public extension Sequence where Element: Hashable {
 
 public extension Array {
     var toData: Data? {
+        guard JSONSerialization.isValidJSONObject(self) else { return nil }
         do {
             let data = try JSONSerialization.data(withJSONObject: self, options: [])
             return data
@@ -26,6 +27,7 @@ public extension Array {
     }
 
     var toJsonString: String {
+        guard JSONSerialization.isValidJSONObject(self) else { return "" }
         if let data = try? JSONSerialization.data(withJSONObject: self) {
             return String(data: data, encoding: .utf8) ?? ""
         }

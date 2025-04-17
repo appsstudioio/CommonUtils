@@ -1,8 +1,8 @@
 //
-//  Int+Extensions.swift
+//  Int+Extension.swift
 //
 //
-//  Created by 10-N3344 on 2023/06/14.
+// Created by Dongju Lim on 2023/06/14.
 //
 
 import Foundation
@@ -83,9 +83,8 @@ public extension NSNumber {
     var toFileSizeString: String {
         var convertedValue: Double = Double(self.uint64Value)
         var multiplyFactor = 0
-        // bytes
-        let tokens = ["B", "KB", "MB", "GB", "TB", "PB",  "EB",  "ZB", "YB"]
-        while convertedValue > 1024 {
+        let tokens = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+        while convertedValue >= 1024 {
             convertedValue /= 1024
             multiplyFactor += 1
         }

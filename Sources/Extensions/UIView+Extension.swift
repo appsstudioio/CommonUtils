@@ -2,7 +2,7 @@
 //  UIView+Extension.swift
 //
 //
-//  Created by 10-N3344 on 8/13/24.
+// Created by Dongju Lim on 8/13/24.
 //
 
 import UIKit

@@ -2,7 +2,7 @@
 //  NetworkConnectivityManager.swift
 //
 //
-//  Created by 10-N3344 on 10/11/24.
+// Created by Dongju Lim on 10/11/24.
 //
 import Foundation
 import Alamofire

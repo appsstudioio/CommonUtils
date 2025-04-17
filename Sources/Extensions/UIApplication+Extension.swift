@@ -2,7 +2,7 @@
 //  UIApplication+Extension.swift
 //
 //
-//  Created by 10-N3344 on 2023/06/14.
+// Created by Dongju Lim on 2023/06/14.
 //
 
 import UIKit
@@ -16,7 +16,17 @@ public extension UIApplication {
             return self.shared.keyWindow
         }
     }
-    
+
+    var windowScene: UIWindowScene? {
+        return self.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first
+    }
+
+    var statusBar: CGRect {
+        return self.windowScene?.statusBarManager?.statusBarFrame ?? .zero
+    }
+
     var safeAreaInsets: UIEdgeInsets {
         if let insets = UIApplication.shared.windows.first?.safeAreaInsets {
             return insets

@@ -2,7 +2,7 @@
 //  CommonUtilsModel.swift
 //  CommonUtils
 //
-//  Created by 10-N3344 on 10/30/24.
+// Created by Dongju Lim on 10/30/24.
 //
 import Kingfisher
 import ProgressHUD

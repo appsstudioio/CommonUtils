@@ -2,7 +2,7 @@
 //  PHPhotoLibrary+Extension.swift
 //
 //  https://gist.github.com/w-i-n-s/9d15ec7beff3fead6b041c687ef00c90
-//  Created by 10-N3344 on 7/1/24.
+// Created by Dongju Lim on 7/1/24.
 //
 
 import UIKit
@@ -54,9 +54,7 @@ public extension PHPhotoLibrary {
     }
     
     fileprivate func saveVideo(fileUrl: URL, album: PHAssetCollection, completion: @escaping ((Bool) -> Void)) {
-
         PHPhotoLibrary.shared().performChanges ({
-
             let createAssetRequest = PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: fileUrl)
             guard let albumChangeRequest = PHAssetCollectionChangeRequest(for: album),
                   let photoPlaceholder = createAssetRequest?.placeholderForCreatedAsset else {
@@ -65,7 +63,6 @@ public extension PHPhotoLibrary {
             }
             let fastEnumeration = NSArray(array: [photoPlaceholder] as [PHObjectPlaceholder])
             albumChangeRequest.addAssets(fastEnumeration)
-
         }, completionHandler: { success, error in
             if success == true && error == nil {
                 completion(true)
@@ -77,9 +74,7 @@ public extension PHPhotoLibrary {
     }
 
     fileprivate func saveUrlToImage(fileUrl: URL, album: PHAssetCollection, completion: @escaping ((Bool) -> Void)) {
-
         PHPhotoLibrary.shared().performChanges ({
-
             let createAssetRequest = PHAssetChangeRequest.creationRequestForAssetFromImage(atFileURL: fileUrl)
             guard let albumChangeRequest = PHAssetCollectionChangeRequest(for: album),
                   let photoPlaceholder = createAssetRequest?.placeholderForCreatedAsset else {
@@ -88,7 +83,6 @@ public extension PHPhotoLibrary {
             }
             let fastEnumeration = NSArray(array: [photoPlaceholder] as [PHObjectPlaceholder])
             albumChangeRequest.addAssets(fastEnumeration)
-
         }, completionHandler: { success, error in
             if success == true && error == nil {
                 completion(true)
@@ -100,7 +94,6 @@ public extension PHPhotoLibrary {
     }
 
     fileprivate func saveImage(image: UIImage, album: PHAssetCollection, completion: @escaping ((Bool) -> Void)) {
-
         PHPhotoLibrary.shared().performChanges({
             let createAssetRequest = PHAssetChangeRequest.creationRequestForAsset(from: image)
             guard let albumChangeRequest = PHAssetCollectionChangeRequest(for: album),
@@ -119,7 +112,6 @@ public extension PHPhotoLibrary {
             }
         })
     }
-
 
     // MARK: - Private
     fileprivate func findAlbum(albumName: String) -> PHAssetCollection? {

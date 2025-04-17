@@ -2,7 +2,7 @@
 //  UIStackView+Extension.swift
 //
 //
-//  Created by 10-N3344 on 10/25/23.
+// Created by Dongju Lim on 10/25/23.
 //
 
 import UIKit

@@ -2,7 +2,7 @@
 //  UIImage+Extension.swift
 //
 //
-//  Created by 10-N3344 on 2023/09/01.
+// Created by Dongju Lim on 2023/09/01.
 //
 
 import Foundation

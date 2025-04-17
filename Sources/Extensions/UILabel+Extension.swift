@@ -2,7 +2,7 @@
 //  UILabel+Extension.swift
 //
 //
-//  Created by 10-N3344 on 10/10/23.
+// Created by Dongju Lim on 10/10/23.
 //
 import Foundation
 import UIKit

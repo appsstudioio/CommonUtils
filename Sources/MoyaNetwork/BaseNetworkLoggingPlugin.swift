@@ -2,7 +2,7 @@
 //  BaseNetworkLoggingPlugin.swift
 //
 //
-//  Created by 10-N3344 on 2023/06/16.
+// Created by Dongju Lim on 2023/06/16.
 //
 
 import Foundation
