@@ -2,7 +2,7 @@
 //  Debug+Extension.swift
 //
 //
-//  Created by 10-N3344 on 8/12/24.
+// Created by Dongju Lim on 8/12/24.
 //
 
 import Foundation
@@ -29,6 +29,7 @@ public extension Data {
 
 public extension Dictionary {
     var debugPrettyString: String {
+        guard JSONSerialization.isValidJSONObject(self) else { return "" }
         do {
             let data = try JSONSerialization.data(withJSONObject: self, options: [.sortedKeys, .prettyPrinted])
             return String(data: data, encoding: .utf8) ?? ""

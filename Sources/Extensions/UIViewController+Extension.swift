@@ -2,7 +2,7 @@
 //  UIViewController+Extension.swift
 //
 //
-//  Created by 10-N3344 on 8/13/24.
+// Created by Dongju Lim on 8/13/24.
 //
 
 import Foundation
@@ -86,7 +86,9 @@ public extension UIViewController {
                 .map{($0.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue.height ?? 0},
             NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)
                 .map { _ in CGFloat(0) }
-        ).eraseToAnyPublisher()
+        )
+        .receive(on: DispatchQueue.main)
+        .eraseToAnyPublisher()
     }
 
     func showActivityViewController(activityItems: [Any], sourceRect: CGRect, animated: Bool = false, completion: (() -> Void)? = nil) {
@@ -159,18 +161,27 @@ public extension UIViewController {
     }
 
     func setNavigationBarTitle(_ titleText: String = "") {
-        self.navigationItem.title = titleText
+        DispatchQueue.main.async { [weak self] in
+            // 빈 문자열을 설정하지 않도록 방어 코드 추가
+            self?.navigationItem.title = titleText.isEmpty ? nil : titleText
+        }
     }
 
     func hideNavigationBar(hidden: Bool, animate: Bool = true, titleText: String = "") {
-        hideNavigationBar(hidden: hidden, animate: animate)
-        if hidden == false && titleText != "" {
-            setNavigationBarTitle(titleText)
+        DispatchQueue.main.async { [weak self] in
+            // NavigationBar 숨기기
+            self?.navigationController?.setNavigationBarHidden(hidden, animated: animate)
+            // NavigationBar가 숨겨지지 않았을 때만 타이틀 설정
+            if !hidden, !titleText.isEmpty {
+                self?.navigationItem.title = titleText.isEmpty ? nil : titleText
+            }
         }
     }
 
     func hideNavigationBar(hidden: Bool, animate: Bool = true) {
-        self.navigationController?.setNavigationBarHidden(hidden, animated: animate)
+        DispatchQueue.main.async { [weak self] in
+            self?.navigationController?.setNavigationBarHidden(hidden, animated: animate)
+        }
     }
 
     func presentView(_ viewVC: UIViewController,
@@ -200,11 +211,11 @@ public extension UIViewController {
     @objc func moveBack(_ animated: Bool = true) {
         if self.presentingViewController != nil {
             if navigationController?.viewControllers.count == 1 || navigationController == nil {
-                self.dismissModalView()
+                self.dismissModalView(animated)
                 return
             }
         }
-        self.popView(animated: true)
+        self.popView(animated: animated)
     }
 
 }

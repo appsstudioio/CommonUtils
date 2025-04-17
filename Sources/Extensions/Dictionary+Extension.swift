@@ -2,13 +2,14 @@
 //  Dictionary+Extension.swift
 //
 //
-//  Created by 10-N3344 on 2023/06/14.
+// Created by Dongju Lim on 2023/06/14.
 //
 
 import Foundation
 
 public extension Dictionary {
     var toData: Data? {
+        guard JSONSerialization.isValidJSONObject(self) else { return nil }
         do {
             let data = try JSONSerialization.data(withJSONObject: self, options: [])
             return data

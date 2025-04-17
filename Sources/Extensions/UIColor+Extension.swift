@@ -1,8 +1,8 @@
 //
-//  UIColor+Extensions.swift
+//  UIColor+Extension.swift
 //
 //
-//  Created by 10-N3344 on 2023/06/14.
+// Created by Dongju Lim on 2023/06/14.
 //
 
 import UIKit
@@ -14,25 +14,25 @@ public extension UIColor {
     }
 
     // notaTODO: - From UIColor to String
-    func toHex(alpha: Bool = false) -> String? {
-        guard let components = cgColor.components, components.count >= 3 else {
+    func toHex(isAlpha: Bool = false) -> String? {
+        guard let rgbColor = self.cgColor.converted(to: CGColorSpace(name: CGColorSpace.sRGB)!, intent: .defaultIntent, options: nil),
+              let components = rgbColor.components,
+              components.count >= 3 else {
             return nil
         }
 
+
         let red = Float(components[0])
         let green = Float(components[1])
-        let black = Float(components[2])
-        var alpha = Float(1.0)
+        let blue = Float(components[2])
+        let alphaValue = Float(rgbColor.alpha)
 
-        if components.count >= 4 {
-            alpha = Float(components[3])
-        }
-
-        if alpha > 0 {
+        if isAlpha {
             return String(format: "%02lX%02lX%02lX%02lX",
-                          lroundf(red * 255), lroundf(green * 255), lroundf(black * 255), lroundf(alpha * 255))
+                          lroundf(red * 255), lroundf(green * 255), lroundf(blue * 255), lroundf(alphaValue * 255))
         } else {
-            return String(format: "%02lX%02lX%02lX", lroundf(red * 255), lroundf(green * 255), lroundf(black * 255))
+            return String(format: "%02lX%02lX%02lX",
+                          lroundf(red * 255), lroundf(green * 255), lroundf(blue * 255))
         }
     }
 
@@ -42,7 +42,7 @@ public extension UIColor {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
 
-        assert(hexSanitized.count == 6, "Invalid hex code used.")
+        guard hexSanitized.count == 6 else { return nil }  // ← assert → guard
         var rgbValue: UInt64 = 0
         Scanner(string: hexSanitized).scanHexInt64(&rgbValue)
 

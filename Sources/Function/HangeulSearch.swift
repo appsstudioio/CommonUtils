@@ -2,7 +2,7 @@
 //  HangeulSearch.swift
 // 
 //
-//  Created by 10-N3344 on 12/5/23.
+// Created by Dongju Lim on 12/5/23.
 //
 
 import Foundation

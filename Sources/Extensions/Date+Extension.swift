@@ -2,12 +2,21 @@
 //  Date+Extension.swift
 //
 //
-//  Created by 10-N3344 on 8/12/24.
+// Created by Dongju Lim on 8/12/24.
 //
 
 import Foundation
 
-public typealias DateWeekType = Date.DateWeekType
+public enum DateWeekType: Int, CaseIterable {
+    case sunday = 1
+    case monday = 2
+    case tuesday = 3
+    case wednesday = 4
+    case thursday = 5
+    case friday = 6
+    case saturday = 7
+}
+
 public extension DateWeekType {
     var shortName: String {
         switch self {
@@ -27,17 +36,6 @@ public extension DateWeekType {
 }
 
 public extension Date {
-
-    enum DateWeekType: Int, CaseIterable {
-        case sunday = 1
-        case monday = 2
-        case tuesday = 3
-        case wednesday = 4
-        case thursday = 5
-        case friday = 6
-        case saturday = 7
-    }
-
     // returns an integer from 1 - 7, with 1 being Sunday and 7 being Saturday
     func dayOfWeek(timeZone: TimeZone = TimeZone.autoupdatingCurrent, locale: Locale? = Locale.current) -> DateWeekType? {
         var calendar = Calendar(identifier: .gregorian)
@@ -63,7 +61,7 @@ public extension Date {
         return components
     }
 
-    func getComponetValue(components: Set<Calendar.Component>, timeZone: TimeZone = TimeZone.autoupdatingCurrent, locale: Locale? = Locale.current) -> DateComponents? {
+    func getComponentValue(_ components: Set<Calendar.Component>, timeZone: TimeZone = TimeZone.autoupdatingCurrent, locale: Locale? = Locale.current) -> DateComponents? {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         calendar.locale = locale
@@ -135,8 +133,8 @@ public extension Date {
         calendar.locale = Locale(identifier: "ko_kr")
 
         // 여기에 기입하지 않은 날짜는 1로 초기화가 된다
-        let year = self.getComponetValue(components: [.year])?.year
-        let month = self.getComponetValue(components: [.month])?.month
+        let year = self.getComponentValue([.year])?.year
+        let month = self.getComponentValue([.month])?.month
         let myDateComponents = DateComponents(year: year, month: month)
 
         // day를 기입하지 않아서 현재 달의 첫번쨰 날짜가 나오게 된다
@@ -148,15 +146,14 @@ public extension Date {
         return nextMonth.toDayDate(-1)!
     }
 
-    var toCalculateDateString: String {
-        let nowDate = Date()
+    func toCalculateDateString(from referenceDate: Date = Date()) -> String {
         let components = Set<Calendar.Component>([.second, .minute, .hour, .day])
-        let differenceOfDate = Calendar(identifier: .gregorian).dateComponents(components, from: self, to: nowDate)
+        let differenceOfDate = Calendar(identifier: .gregorian).dateComponents(components, from: self, to: referenceDate)
         guard let day = differenceOfDate.day,
               let hour = differenceOfDate.hour,
               let minute = differenceOfDate.minute,
               let second = differenceOfDate.second else { return "" }
-        if self < nowDate {
+        if self < referenceDate {
             if day < 100 {
                 if day == 0 {
                     if hour == 0 {

@@ -2,7 +2,7 @@
 //  String+Extension.swift
 //
 //
-//  Created by 10-N3344 on 2023/06/14.
+// Created by Dongju Lim on 2023/06/14.
 //
 
 import Foundation
@@ -11,54 +11,88 @@ import CryptoKit
 
 public extension String {
     func substring(from: Int, to: Int) -> String {
-        guard from < count, to >= 0, to - from >= 0 else {
+        guard from >= 0, to >= from, from < count, to < count else {
             return ""
         }
-        
-        // Index 값 획득
-        let startIndex = index(self.startIndex, offsetBy: from)
-        let endIndex = index(self.startIndex, offsetBy: to + 1) // '+1'이 있는 이유: endIndex는 문자열의 마지막 그 다음을 가리키기 때문
-        // 파싱
+
+        guard let startIndex = self.index(self.startIndex, offsetBy: from, limitedBy: self.endIndex),
+              let endIndex = self.index(self.startIndex, offsetBy: to + 1, limitedBy: self.endIndex) else {
+            return ""
+        }
         return String(self[startIndex ..< endIndex])
     }
     
     // 자릿수 제거
     // https://velog.io/@baecheese
     var toInt: Int {
-        let value = self.replaceToPureNumber
-        if value > Double(Int.max) {
-            let str = self.substring(from: 0, to: (self.count-2))
-            return Int(str.replaceToPureNumber)
+        let pureNumberString = self.pureNumberString
+        if let number = Decimal(string: pureNumberString) {
+            let intMax = Decimal(Int.max)
+            let intMin = Decimal(Int.min)
+
+            if number > intMax {
+                return Int.max
+            } else if number < intMin {
+                return Int.min
+            } else {
+                return NSDecimalNumber(decimal: number).intValue
+            }
         }
-        return Int(self.replaceToPureNumber)
+        return 0
     }
     
     var toInt64: Int64 {
-        let value = self.replaceToPureNumber
-        if value > Double(Int64.max) {
-            let str = self.substring(from: 0, to: (self.count-2))
-            return Int64(str.replaceToPureNumber)
+        let pureNumberString = self.pureNumberString
+
+        if let number = Decimal(string: pureNumberString) {
+            let int64Max = Decimal(Int64.max)
+            let int64Min = Decimal(Int64.min)
+
+            if number > int64Max {
+                return Int64.max
+            } else if number < int64Min {
+                return Int64.min
+            } else {
+                return NSDecimalNumber(decimal: number).int64Value
+            }
         }
-        return Int64(self.replaceToPureNumber)
+
+        return 0
     }
-    
+
     var toFloat: Float {
-        return Float(self.replaceToPureNumber)
+        guard let value = self.replaceToPureNumber else { return 0 }
+        return Float(value)
     }
     
     var toDouble: Double {
-        return self.replaceToPureNumber
+        guard let value = self.replaceToPureNumber else { return 0 }
+        return value
     }
 
-    private var replaceToPureNumber: Double {
+    private var pureNumberString: String {
+        let numberFormatter = NumberFormatter()
+        numberFormatter.locale = Locale(identifier: "ko_KR")
+        let groupingSeparator = numberFormatter.groupingSeparator ?? ""
+        let decimalSeparator = numberFormatter.decimalSeparator ?? ""
+
+        return self.replacingOccurrences(of: "[^\(decimalSeparator)\(groupingSeparator)0-9\\-]", with: "", options: .regularExpression)
+            .replacingOccurrences(of: groupingSeparator, with: "")
+            .replacingOccurrences(of: decimalSeparator, with: ".")
+    }
+
+    private var replaceToPureNumber: Double? {
         let numberFormatter = NumberFormatter()
         numberFormatter.locale = Locale(identifier: "ko_KR")
         let groupingSeparator = numberFormatter.groupingSeparator ?? "" // 천단위 기호
         let decimalSeparator = numberFormatter.decimalSeparator ?? "" // 소숫점 기호
-        let valueString = self.replacingOccurrences(of: "[^\(decimalSeparator)\(groupingSeparator)0-9]", with: "", options: .regularExpression)
+
+        let valueString = self
+            .replacingOccurrences(of: "[^\(decimalSeparator)\(groupingSeparator)0-9\\-]", with: "", options: .regularExpression)
             .replacingOccurrences(of: groupingSeparator, with: "")
-            .replacingOccurrences(of: decimalSeparator, with: ".") // 소숫점 기호를 .으로 변경
-        return Double(valueString) ?? 0
+            .replacingOccurrences(of: decimalSeparator, with: ".")
+
+        return Double(valueString)
     }
 
     var stringTrim: String {
@@ -142,7 +176,7 @@ public extension String {
                 return nil
             }
             
-            return try? NSMutableAttributedString(data: data,
+            return try NSMutableAttributedString(data: data,
                                                  options: [.documentType: NSMutableAttributedString.DocumentType.html,
                                                            .characterEncoding: String.Encoding.utf8.rawValue],
                                                  documentAttributes: nil)
@@ -158,11 +192,11 @@ public extension String {
             return self
         }
         do {
-            let attributed = try? NSAttributedString(data: encodedData,
+            let attributed = try NSAttributedString(data: encodedData,
                                                     options: [ .documentType: NSAttributedString.DocumentType.html,
                                                                .characterEncoding: String.Encoding.utf8.rawValue],
                                                     documentAttributes: nil)
-            return attributed?.string ?? self
+            return attributed.string
         } catch {
             return self
         }
@@ -190,14 +224,48 @@ public extension String {
 
     var isEmoji: Bool {
         for scalar in unicodeScalars {
-            if scalar.properties.isEmoji {
+            // 더 정확한 이모지 확인 조건 추가
+            if scalar.properties.isEmoji && scalar.properties.isEmojiPresentation {
                 return true
             }
             continue
         }
         return false
     }
-    
+
+    /// Checks if the string is a valid email address.
+    /// - Returns: A boolean indicating if the email is valid according to RFC 5322 format and disallows consecutive dots in domain.
+    var isValidEmail: Bool {
+        let emailRegEx = #"^(?:[\p{L}0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[\p{L}0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[\p{L}0-9](?:[a-z0-9-]*[\p{L}0-9])?\.)+[\p{L}0-9](?:[\p{L}0-9-]*[\p{L}0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[\p{L}0-9-]*[\p{L}0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$"#
+
+        let predicate = NSPredicate(format: "SELF MATCHES %@", emailRegEx)
+        guard predicate.evaluate(with: self) else { return false }
+
+        // Prevent domain part from containing consecutive dots (e.g., "domain..com")
+        if let domainPart = self.components(separatedBy: "@").last,
+           domainPart.contains("..") {
+            return false
+        }
+
+        return true
+    }
+
+    // Extracts the domain part from an email address
+    // - Returns: Optional string containing the domain, or nil if not a valid email
+    var emailDomain: String? {
+        guard self.isValidEmail else { return nil }
+        let components = self.components(separatedBy: "@")
+        return components.count > 1 ? components[1] : nil
+    }
+
+    // Extracts the username part from an email address
+    // - Returns: Optional string containing the username, or nil if not a valid email
+    var emailUsername: String? {
+        guard self.isValidEmail else { return nil }
+        let components = self.components(separatedBy: "@")
+        return components.first
+    }
+
     var localization: String {
         return NSLocalizedString(self, comment: "")
     }
@@ -206,13 +274,13 @@ public extension String {
         return (isBundle ? NSLocalizedString(self, bundle: Bundle.module, comment: "") : NSLocalizedString(self, comment: ""))
     }
 
-    var toEncoding: String {
-        return self.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+    func toEncoding(withAllowedCharacters characters: CharacterSet) -> String {
+        return self.addingPercentEncoding(withAllowedCharacters: characters) ?? self
     }
     
     var toDecoding: String {
         let returnString = self.replacingOccurrences(of: "+", with: "%20")
-        return returnString.removingPercentEncoding ?? ""
+        return returnString.removingPercentEncoding ?? self
     }
 
     var md5: String {
@@ -221,15 +289,19 @@ public extension String {
     }
 
     func applyPatternOnNumbers(pattern: String, replacmentCharacter: Character) -> String {
-        var pureNumber = self.replacingOccurrences( of: "[^0-9]", with: "", options: .regularExpression)
-        for index in 0 ..< pattern.count {
-            guard index < pureNumber.count else { return pureNumber }
-            let stringIndex = String.Index(utf16Offset: index, in: self)
-            let patternCharacter = pattern[stringIndex]
-            guard patternCharacter != replacmentCharacter else { continue }
-            pureNumber.insert(patternCharacter, at: stringIndex)
+        let numbers = self.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+        var result = ""
+        var numberIndex = numbers.startIndex
+        for ch in pattern {
+            if ch == replacmentCharacter {
+                guard numberIndex < numbers.endIndex else { break }
+                result.append(numbers[numberIndex])
+                numberIndex = numbers.index(after: numberIndex)
+            } else {
+                result.append(ch)
+            }
         }
-        return pureNumber
+        return result
     }
 
     // UTF-16 기반의 실제 커서 위치를 계산하는 방법
@@ -244,17 +316,6 @@ public extension String {
 
     var isNumeric : Bool {
         return NumberFormatter().number(from: self) != nil
-    }
-
-    func decodeUtf8() -> String {
-        let encodedString = self.replacingOccurrences(of: "+", with: "%20")
-        let decodedString = encodedString.removingPercentEncoding
-        return decodedString ?? self
-    }
-
-    func encodeUtf8() -> String {
-        let encodeString = self.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
-        return encodeString ?? self
     }
 
     /// 텍스트를 이미지로 변환하는 함수

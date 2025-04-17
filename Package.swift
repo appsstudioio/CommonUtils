@@ -33,7 +33,10 @@ let package = Package(
             resources: [.process("Resources")]),
         .testTarget(
             name: "CommonUtilsTests",
-            dependencies: ["CommonUtils"])
+            dependencies: ["CommonUtils"],
+            resources: [
+                .process("TestSampleData")
+            ])
     ],
     swiftLanguageVersions: [.v5]
 )

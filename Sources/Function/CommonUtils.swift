@@ -209,7 +209,7 @@ public class CommonUtils {
 // MARK: - Kingfisher, ProgressHUD Config
 public extension CommonUtils {
 
-    static public func kingfisherConfig(_ config: CommonKingfisherConfig = CommonKingfisherConfig()) {
+    static func kingfisherConfig(_ config: CommonKingfisherConfig = CommonKingfisherConfig()) {
 #if canImport(Kingfisher)
         /* Kingfisher Image Cache config */
         // Limit memory cache size to 200 MB.(200 * 1024 * 1024)
@@ -238,7 +238,7 @@ public extension CommonUtils {
 #endif
     }
 
-    static public func progressHUDConfig(_ config: CommonProgressHUDConfig = CommonProgressHUDConfig()) {
+    static func progressHUDConfig(_ config: CommonProgressHUDConfig = CommonProgressHUDConfig()) {
 #if canImport(ProgressHUD)
         ProgressHUD.animationType = config.animationType
         ProgressHUD.colorHUD = config.colorHUD
@@ -253,9 +253,7 @@ public extension CommonUtils {
 
 public extension CommonUtils {
 
-    static public func downloadUrlImage(_ hostURL: String,
-                                        path: String,
-                                        completionHandler: @escaping (UIImage?, Data?) -> Void) {
+    static func downloadUrlImage(_ hostURL: String, path: String, completionHandler: @escaping (UIImage?, Data?) -> Void) {
 #if canImport(Kingfisher)
         if let url = CommonUtils.createUrlPath(hostURL, path: path) {
             showLoadingView()
@@ -279,10 +277,8 @@ public extension CommonUtils {
 #endif
     }
 
-    static public func downloadUrlImages(_ hostURL: String,
-                                         paths: [String],
-                                         isFileData: Bool = false,
-                                         handler: @escaping ([UIImage]?, [Data]?) -> Void) {
+    static func downloadUrlImages(_ hostURL: String, paths: [String], isFileData: Bool = false, handler: @escaping ([UIImage]?, [Data]?) -> Void) {
+        let syncQueue = DispatchQueue(label: "image.sync.queue")
         var images: [UIImage] = []
         var imageDatas: [Data] = []
 #if canImport(Kingfisher)
@@ -292,25 +288,34 @@ public extension CommonUtils {
             if let url = CommonUtils.createUrlPath(hostURL, path: $0) {
                 waitGroup.enter()
 
-                ImageDownloader.default.downloadImage(with: url,
-                                                      options: []) { result in
+                ImageDownloader.default.downloadImage(with: url, options: []) { result in
+                    var imageToAppend: UIImage?
+                    var dataToAppend: Data?
+
                     switch result {
                     case .success(let value):
                         let mimeType = value.originalData.mimeType
-                        if mimeType?.type == .webp {
-                            if let imageData = UIImage(data: value.originalData)?.jpegData(compressionQuality: 0.9),
-                               let image = UIImage(data: imageData) {
-                                images.append(image)
-                                imageDatas.append(imageData)
-                            }
+                        if mimeType?.type == .webp,
+                           let imageData = UIImage(data: value.originalData)?.jpegData(compressionQuality: 0.9),
+                           let image = UIImage(data: imageData) {
+                            imageToAppend = image
+                            dataToAppend = imageData
                         } else {
-                            images.append(value.image)
-                            imageDatas.append(value.originalData)
+                            imageToAppend = value.image
+                            dataToAppend = value.originalData
                         }
                     case .failure(let error):
                         DebugLog("Job failed: \(error.localizedDescription)")
                     }
-                    waitGroup.leave()
+
+                    // 공유 배열에 접근은 이 안에서만
+                    syncQueue.async {
+                        if let image = imageToAppend, let data = dataToAppend {
+                            images.append(image)
+                            imageDatas.append(data)
+                        }
+                        waitGroup.leave()
+                    }
                 }
             }
         }
@@ -325,7 +330,7 @@ public extension CommonUtils {
 
     }
 
-    static public func downLocalImages(_ paths: [String], handler: @escaping ([UIImage]?, [Data]?) -> Void) {
+    static func downLocalImages(_ paths: [String], handler: @escaping ([UIImage]?, [Data]?) -> Void) {
         var images: [UIImage] = []
         var imageDatas: [Data] = []
 #if canImport(Kingfisher)
@@ -468,7 +473,7 @@ public extension CommonUtils {
         return remoteDic
     }
 
-    static func compressVideo(inputURL: URL, presetName: String, completion: @escaping (URL?, Error?) -> Void) {
+    static func compressVideo(inputURL: URL, presetName: String, outputFileName: String? = nil, completion: @escaping (URL?, Error?) -> Void) {
         // 1. 먼저 비디오 파일이 유효한지 확인
         let asset = AVURLAsset(url: inputURL, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
 
@@ -497,13 +502,16 @@ public extension CommonUtils {
             DebugLog("대체 프리셋으로 시도: \(alternatePreset)")
 
             // 재귀적으로 다른 프리셋으로 시도
-            compressVideo(inputURL: inputURL, presetName: alternatePreset, completion: completion)
+            compressVideo(inputURL: inputURL, presetName: alternatePreset, outputFileName: outputFileName, completion: completion)
             return
         }
 
         // 5. 고유한 출력 파일 이름 생성
         let originalFileName = inputURL.deletingPathExtension().lastPathComponent // ✅ 기존 파일명 유지
-        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(originalFileName).mp4")
+        var outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(originalFileName).mp4")
+        if let outputFileName = outputFileName {
+            outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(outputFileName).mp4")
+        }
 
         // 6. 기존 파일이 있다면 제거
         if FileManager.default.fileExists(atPath: outputURL.path) {

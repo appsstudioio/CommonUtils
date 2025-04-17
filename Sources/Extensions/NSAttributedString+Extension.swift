@@ -2,7 +2,7 @@
 //  NSAttributedString+Extension.swift
 //
 //
-//  Created by 10-N3344 on 2023/06/14.
+// Created by Dongju Lim on 2023/06/14.
 //
 
 import Foundation
@@ -160,9 +160,9 @@ public extension NSAttributedString {
     }
 
     func getBoxSizeAndLineCnt(maxWidth: CGFloat, fontSize: UIFont) -> (CGSize, Int) {
-        let size = self.sizeFittingWidth(maxWidth) ?? CGSize(width: maxWidth, height: fontSize.lineHeight)
+        let size = self.sizeFittingWidth(maxWidth)
         let height = size.height
-        let lineCnt = Int(lroundf(Float(height / fontSize.lineHeight))) ?? 1
+        let lineCnt = Int(lroundf(Float(height / fontSize.lineHeight)))
         return (size, lineCnt)
     }
 }
