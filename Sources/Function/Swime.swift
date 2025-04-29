@@ -9,58 +9,56 @@ import Foundation
 
 // https://github.com/sendyhalim/Swime/tree/master
 public struct Swime {
-  /// File data
-  let data: Data
+    /// File data
+    let data: Data
 
-  ///  A static method to get the `MimeType` that matches the given file data
-  ///
-  ///  - returns: Optional<MimeType>
-  static public func mimeType(data: Data) -> MimeType? {
-    return mimeType(swime: Swime(data: data))
-  }
-
-  ///  A static method to get the `MimeType` that matches the given bytes
-  ///
-  ///  - returns: Optional<MimeType>
-  static public func mimeType(bytes: [UInt8]) -> MimeType? {
-    return mimeType(swime: Swime(bytes: bytes))
-  }
-
-  ///  Get the `MimeType` that matches the given `Swime` instance
-  ///
-  ///  - returns: Optional<MimeType>
-  static public func mimeType(swime: Swime) -> MimeType? {
-    let bytes = swime.readBytes(count: min(swime.data.count, 262))
-
-    for mime in MimeType.all {
-      if mime.matches(bytes: bytes, swime: swime) {
-        return mime
-      }
+    ///  A static method to get the `MimeType` that matches the given file data
+    ///
+    ///  - returns: Optional<MimeType>
+    static public func mimeType(data: Data) -> MimeType? {
+        return mimeType(swime: Swime(data: data))
     }
 
-    return nil
-  }
+    ///  A static method to get the `MimeType` that matches the given bytes
+    ///
+    ///  - returns: Optional<MimeType>
+    static public func mimeType(bytes: [UInt8]) -> MimeType? {
+        return mimeType(swime: Swime(bytes: bytes))
+    }
 
-  public init(data: Data) {
-    self.data = data
-  }
+    ///  Get the `MimeType` that matches the given `Swime` instance
+    ///
+    ///  - returns: Optional<MimeType>
+    static public func mimeType(swime: Swime) -> MimeType? {
+        let bytes = swime.readBytes(count: min(swime.data.count, 262))
 
-  public init(bytes: [UInt8]) {
-    self.init(data: Data(bytes))
-  }
+        for mime in MimeType.all {
+            if mime.matches(bytes: bytes, swime: swime) {
+                return mime
+            }
+        }
 
-  ///  Read bytes from file data
-  ///
-  ///  - parameter count: Number of bytes to be read
-  ///
-  ///  - returns: Bytes represented with `[UInt8]`
-  internal func readBytes(count: Int) -> [UInt8] {
-    var bytes = [UInt8](repeating: 0, count: count)
+        return nil
+    }
 
-    data.copyBytes(to: &bytes, count: count)
+    internal init(data: Data) {
+        self.data = data
+    }
 
-    return bytes
-  }
+    internal init(bytes: [UInt8]) {
+        self.init(data: Data(bytes))
+    }
+
+    ///  Read bytes from file data
+    ///
+    ///  - parameter count: Number of bytes to be read
+    ///
+    ///  - returns: Bytes represented with `[UInt8]`
+    internal func readBytes(count: Int) -> [UInt8] {
+        var bytes = [UInt8](repeating: 0, count: count)
+        data.copyBytes(to: &bytes, count: count)
+        return bytes
+    }
 }
 
 /// List of type shorthands
@@ -74,6 +72,7 @@ public enum FileType: String {
     case amr
     case ar
     case avi
+    case avif
     case bmp
     case bz2
     case cab
@@ -131,6 +130,7 @@ public enum FileType: String {
     case z
     case zip
     case heic
+    case heif
 }
 
 public struct MimeType {
@@ -159,7 +159,8 @@ public struct MimeType {
   ///
   ///  - returns: Bool
   public func matches(bytes: [UInt8], swime: Swime) -> Bool {
-    return bytes.count >= bytesCount && matches(bytes, swime)
+      guard bytes.count >= bytesCount else { return false }
+      return matches(bytes, swime)
   }
 
   /// List of all supported `MimeType`s
@@ -819,7 +820,26 @@ public struct MimeType {
         matches: { bytes, _ in
             return bytes[8...11] == [0x68, 0x65, 0x69, 0x63] || bytes[8...11] == [0x68, 0x65, 0x69, 0x78]
         }
+    ),
+    MimeType(
+        mime: "image/heif",
+        ext: "heif",
+        type: .heif,
+        bytesCount: 12,
+        matches: { bytes, _ in
+            return bytes[8...11] == [0x68, 0x65, 0x69, 0x66]
+        }
+    ),
+    MimeType(
+        mime: "image/avif",
+        ext: "avif",
+        type: .avif,
+        bytesCount: 12,
+        matches: { bytes, _ in
+            return bytes[8...11] == [0x61, 0x76, 0x69, 0x66]
+        }
     )
+
   ]
 }
 

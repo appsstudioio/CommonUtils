@@ -11,9 +11,21 @@ import Combine
 import Moya
 #endif
 
-public enum NetworkException: Error {
+public enum NetworkException: Error, Equatable {
     case errorStatusCode(Int)
     case serverError(Error)
+
+    public static func == (lhs: NetworkException, rhs: NetworkException) -> Bool {
+        switch (lhs, rhs) {
+        case let (.errorStatusCode(lhsCode), .errorStatusCode(rhsCode)):
+            return lhsCode == rhsCode
+        case let (.serverError(lhsError), .serverError(rhsError)):
+            return (lhsError as NSError).domain == (rhsError as NSError).domain &&
+            (lhsError as NSError).code == (rhsError as NSError).code
+        default:
+            return false
+        }
+    }
 }
 
 #if canImport(Moya)
