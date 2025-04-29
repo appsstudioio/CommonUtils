@@ -18,21 +18,46 @@ public enum DebugLogLevel: String {
     case debug, info, error, log, trace, notice, warning, critical, fault
 }
 
+@available(iOS 14.0, *)
+private var loggerCache = [String: Logger]()
+private let loggerQueue = DispatchQueue(label: "debug.log.queue")
+
+@available(iOS 14.0, *)
+private func getLogger(subsystem: String, category: String) -> Logger {
+    let key = "\(subsystem)_\(category)"
+    return loggerQueue.sync {
+        if let cached = loggerCache[key] {
+            return cached
+        } else {
+            let newLogger = Logger(subsystem: subsystem, category: category)
+            loggerCache[key] = newLogger
+            return newLogger
+        }
+    }
+}
+
 public func DebugLog(_ message: Any? = "",
                      level: DebugLogLevel = .info,
                      file: String = #file,
                      funcName: String = #function,
                      line: Int = #line,
                      param: [String: Any] = [:]) {
-// #if DEBUG
+#if DEBUG
     let fileName: String = (file as NSString).lastPathComponent
-    let fullMessage = """
+    var fullMessage = """
     [파일: \(fileName), 라인: \(line), 함수: \(funcName)]
-    \(message ?? "")
+    \(String(describing: message))
     """
+
+    if !param.isEmpty {
+        fullMessage += "\n[추가 정보: \(param.toJsonString)]"
+    }
+
+
     if #available(iOS 14.0, *) {
         // Xcode15 로깅 기능 추가. https://ios-development.tistory.com/381
-        let logger = Logger(subsystem: CommonUtils.getBundleIdentifier, category: level.rawValue)
+        let subsystem = CommonUtils.getBundleIdentifier
+        let logger = getLogger(subsystem: subsystem, category: level.rawValue)
         switch level {
         case .debug:
             logger.debug("\(fullMessage)")
@@ -56,7 +81,7 @@ public func DebugLog(_ message: Any? = "",
     } else {
         debugPrint(fullMessage)
     }
-// #endif
+#endif
 }
 
 public func showLoadingView(_ text: String? = nil, interaction: Bool = false) {
@@ -80,15 +105,15 @@ public func dismissLoadingView() {
 public class CommonUtils {
 
     static public func getAppVersion() -> String {
-        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     }
 
     static public var getAppName: String {
-        return Bundle.main.infoDictionary?["CFBundleDisplayName"] as? String ?? "Medisay"
+        return Bundle.main.infoDictionary?["CFBundleDisplayName"] as? String ?? "UnknownAppName"
     }
 
     static public var getBundleIdentifier: String {
-        return Bundle.main.bundleIdentifier ?? (Bundle.main.infoDictionary?["BundleIdentifier"] as? String ?? "")
+        return Bundle.main.bundleIdentifier ?? (Bundle.main.infoDictionary?["BundleIdentifier"] as? String ?? "UnknownBundle")
     }
 
     static public func getModel() -> String {
