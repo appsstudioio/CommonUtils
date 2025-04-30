@@ -165,4 +165,33 @@ public extension NSAttributedString {
         let lineCnt = Int(lroundf(Float(height / fontSize.lineHeight)))
         return (size, lineCnt)
     }
+
+    var extractImageAttachments: [UIImage] {
+        let mutableAttrString = NSMutableAttributedString(attributedString: self)
+        return mutableAttrString.extractAndRemoveImageAttachments
+    }
+}
+
+public extension NSMutableAttributedString {
+    /// 이미지 NSTextAttachment들을 추출하고 제거한 뒤 이미지 배열을 반환
+    var extractAndRemoveImageAttachments: [UIImage] {
+        var extractedImages: [UIImage] = []
+        self.enumerateAttribute(.attachment, in: NSRange(location: 0, length: self.length), options: [.reverse]) { value, range, _ in
+            guard let attachment = value as? NSTextAttachment else { return }
+            if let image = attachment.image {
+                extractedImages.append(image)
+                // 이미지(attachment) 제거
+                self.deleteCharacters(in: range)
+            } else if let data = attachment.fileWrapper?.regularFileContents, let image = UIImage(data: data) {
+                extractedImages.append(image)
+                // 이미지(attachment) 제거
+                self.deleteCharacters(in: range)
+            } else if let data = attachment.contents, let image = UIImage(data: data) {
+                extractedImages.append(image)
+                // 이미지(attachment) 제거
+                self.deleteCharacters(in: range)
+            }
+        }
+        return extractedImages
+    }
 }

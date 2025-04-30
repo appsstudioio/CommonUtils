@@ -38,7 +38,7 @@ public extension UIImage {
         }
     }
 
-    class func colorToBackgroundImage(_ color: UIColor, alpha: CGFloat = 1.0) -> UIImage {
+    static func colorToBackgroundImage(_ color: UIColor, alpha: CGFloat = 1.0) -> UIImage {
         let rect = CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0)
         UIGraphicsBeginImageContext(rect.size)
         let context = UIGraphicsGetCurrentContext()
@@ -49,6 +49,15 @@ public extension UIImage {
         UIGraphicsEndImageContext()
 
         return image!
+    }
+
+    static func makeColorImage(color: UIColor, size: CGSize = CGSize(width: 10, height: 10)) -> UIImage {
+        UIGraphicsBeginImageContext(size)
+        color.setFill()
+        UIRectFill(CGRect(origin: .zero, size: size))
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image ?? UIImage()
     }
 
     func imageWithImage(scaledToWidth: CGFloat) -> UIImage {

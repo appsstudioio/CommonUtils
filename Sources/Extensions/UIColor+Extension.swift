@@ -52,4 +52,13 @@ public extension UIColor {
                   alpha: alpha)
 
     }
+
+    func toImage(size: CGSize = CGSize(width: 10, height: 10)) -> UIImage {
+        UIGraphicsBeginImageContext(size)
+        self.setFill()
+        UIRectFill(CGRect(origin: .zero, size: size))
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image ?? UIImage()
+    }
 }
