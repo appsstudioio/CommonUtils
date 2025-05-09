@@ -56,3 +56,45 @@ public struct CommonProgressHUDConfig {
         self.fontStatus = fontStatus
     }
 }
+
+public struct CommonUtilVideoInfo {
+    let duration: Double
+    let resolution: CGSize?
+    let frameRate: Float?
+    let bitRate: Float?
+    let videoCodec: String?
+    let audioCodec: String?
+    let audioSampleRate: Float64?
+    let audioChannels: Int?
+}
+
+public enum CommonUtilCompressionError: Error {
+    case exportSessionFailure(String)
+    case unknownError
+    case minimumQualityExceedsMaxFileSize(Int64)
+}
+
+// 압축 품질 설정
+public enum CommonUtilCompressionQuality {
+    case low
+    case medium
+    case high
+
+    // 원본 비트레이트 대비 압축 비율 (%)
+    var compressionRatio: Float {
+        switch self {
+        case .low: return 0.5     // 원본의 50%
+        case .medium: return 0.7  // 원본의 70%
+        case .high: return 0.9    // 원본의 90%
+        }
+    }
+
+    // 최소 비트레이트 보장 (화질 저하 방지)
+    var minimumBitRate: Float {
+        switch self {
+        case .low: return 1_000_000    // 최소 1 Mbps
+        case .medium: return 2_000_000 // 최소 2 Mbps
+        case .high: return 3_000_000   // 최소 3 Mbps
+        }
+    }
+}

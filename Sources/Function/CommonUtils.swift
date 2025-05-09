@@ -229,6 +229,323 @@ public class CommonUtils {
         }
         return nil
     }
+
+    static public func getVideoThumbnailImage(fileUrl: URL) -> UIImage? {
+        // 썸네일 사진
+        do {
+            let videoAsset = AVAsset(url: fileUrl)
+            let assetImgGenerate = AVAssetImageGenerator(asset: videoAsset)
+            assetImgGenerate.appliesPreferredTrackTransform = true
+
+            let time = CMTimeMakeWithSeconds(0.0, preferredTimescale: 600)
+            let cgImg = try assetImgGenerate.copyCGImage(at: time, actualTime: nil)
+            let img = UIImage(cgImage: cgImg)
+            return img
+        } catch let error {
+            DebugLog(error.localizedDescription)
+            return nil
+        }
+    }
+
+    static public func extractVideoInfo(from url: URL) -> CommonUtilVideoInfo {
+        let asset = AVAsset(url: url)
+        let duration = CMTimeGetSeconds(asset.duration)
+        var resolution: CGSize? = nil
+        var frameRate: Float? = nil
+        var bitRate: Float? = nil
+        var videoCodec: String? = nil
+        var audioCodec: String? = nil
+        var audioSampleRate: Float64? = nil
+        var audioChannels: Int? = nil
+
+        if let videoTrack = asset.tracks(withMediaType: .video).first {
+            let size = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
+            resolution = CGSize(width: abs(size.width), height: abs(size.height))
+            frameRate = videoTrack.nominalFrameRate
+            bitRate = videoTrack.estimatedDataRate // bps
+
+            // 코덱 정보
+            if let formatDescription = videoTrack.formatDescriptions.first {
+                let desc = formatDescription as! CMFormatDescription
+                let codecType = CMFormatDescriptionGetMediaSubType(desc)
+                videoCodec = codecType.toString()
+            }
+        }
+
+        if let audioTrack = asset.tracks(withMediaType: .audio).first {
+            let formatDescription = audioTrack.formatDescriptions.first as! CMAudioFormatDescription
+            if let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription)?.pointee {
+                audioCodec = audioTrack.mediaType.rawValue
+                audioSampleRate = asbd.mSampleRate
+                audioChannels = Int(asbd.mChannelsPerFrame)
+            }
+        }
+
+        return CommonUtilVideoInfo(
+            duration: duration,
+            resolution: resolution,
+            frameRate: frameRate,
+            bitRate: bitRate,
+            videoCodec: videoCodec,
+            audioCodec: audioCodec,
+            audioSampleRate: audioSampleRate,
+            audioChannels: audioChannels
+        )
+    }
+
+    // 동영상 압축 함수
+    static public func compressVideo(inputURL: URL,
+                                     outputURL: URL,
+                                     quality: CommonUtilCompressionQuality = .medium,
+                                     maxFileSize: Int64? = nil, // 최대 파일 크기 제한 (옵셔널)
+                                     completion: @escaping (Result<URL, Error>) -> Void) {
+
+        // 입력 동영상의 애셋 생성
+        let asset = AVAsset(url: inputURL)
+
+        // 비디오 트랙 가져오기
+        guard let videoTrack = asset.tracks(withMediaType: .video).first else {
+            completion(.failure(CommonUtilCompressionError.exportSessionFailure("비디오 트랙을 찾을 수 없음")))
+            return
+        }
+
+        // 기존 비디오 정보 가져오기
+        let originalVideoInfo = self.extractVideoInfo(from: inputURL)
+        let originalSize = videoTrack.naturalSize
+        let duration = originalVideoInfo.duration ?? CMTimeGetSeconds(asset.duration)
+
+        // 원본 파일 크기 확인
+        let originalFileSize = self.getFileSize(filePath: inputURL.path).int64Value
+
+        // 원본 비트레이트 계산 (bps)
+        let originalBitRate: Float = (originalVideoInfo.bitRate ?? Float(Double((originalFileSize)) * 8 / duration))
+        // 품질 설정에 따른 목표 비트레이트 계산 (원본 기준)
+        var targetBitRate: Float = originalBitRate * quality.compressionRatio
+        // 최소 비트레이트는 원본 비트레이트를 초과하지 않도록 함
+        let safeMinimumBitRate: Float = min(quality.minimumBitRate, originalBitRate)
+        // 계산된 목표 비트레이트와 안전한 최소 비트레이트 중 큰 값 선택
+        targetBitRate = max(targetBitRate, safeMinimumBitRate)
+        // 추가 안전장치: 어떤 경우에도 원본 비트레이트보다 커지지 않도록 함
+        targetBitRate = min(targetBitRate, originalBitRate)
+
+        // 오디오 비트레이트 (비디오는 전체 비트레이트의 약 90%로 가정)
+        let videoBitRate = targetBitRate * 0.9
+        let audioSampleRate = originalVideoInfo.audioSampleRate ?? 44100
+        let audioChannels = originalVideoInfo.audioChannels ?? 2
+        let audioBitRate: Float = 128_000 // 128 kbps (표준 오디오 품질)
+        let estimatedFileSize = Int64((videoBitRate + audioBitRate) * Float(duration) / 8) // 예상 파일 사이즈
+        DebugLog("원본 비디오 정보: \(originalVideoInfo)")
+        DebugLog("원본 비트레이트: \(originalBitRate / 1_000_000) Mbps")
+        DebugLog("목표 비트레이트: \(targetBitRate / 1_000_000) Mbps")
+        DebugLog("비디오 비트레이트: \(videoBitRate / 1_000_000) Mbps")
+        DebugLog("원본 파일 사이즈: \(originalFileSize.toFileByteSting)")
+        DebugLog("예상 파일 사이즈: \(estimatedFileSize.toFileByteSting)")
+
+        // 최대 파일 크기 제한이 있는 경우, 예상 파일 크기 미리 계산
+        if let maxFileSize = maxFileSize {
+            if estimatedFileSize > maxFileSize {
+                // maxFileSize를 초과할 경우 에러 반환
+                completion(.failure(CommonUtilCompressionError.minimumQualityExceedsMaxFileSize(estimatedFileSize)))
+                return
+            }
+        }
+
+        // 압축 세션 설정
+        do {
+            // 컴포지션 생성
+            let composition = AVMutableComposition()
+
+            // 비디오 트랙 추가
+            guard let compositionVideoTrack = composition.addMutableTrack(
+                withMediaType: .video,
+                preferredTrackID: kCMPersistentTrackID_Invalid) else {
+                completion(.failure(CommonUtilCompressionError.exportSessionFailure("Composition 비디오 트랙 생성 실패")))
+                return
+            }
+
+            // 원본 비디오 트랙 삽입
+            try compositionVideoTrack.insertTimeRange(
+                CMTimeRange(start: .zero, duration: asset.duration),
+                of: videoTrack,
+                at: .zero
+            )
+            compositionVideoTrack.preferredTransform = videoTrack.preferredTransform
+
+            // 오디오 트랙이 있으면 추가
+            var audioTrackExists = false
+            if let audioTrack = asset.tracks(withMediaType: .audio).first {
+                audioTrackExists = true
+                guard let compositionAudioTrack = composition.addMutableTrack(
+                    withMediaType: .audio,
+                    preferredTrackID: kCMPersistentTrackID_Invalid) else {
+                    completion(.failure(CommonUtilCompressionError.exportSessionFailure("Composition 오디오 트랙 생성 실패")))
+                    return
+                }
+
+                try compositionAudioTrack.insertTimeRange(
+                    CMTimeRange(start: .zero, duration: asset.duration),
+                    of: audioTrack,
+                    at: .zero
+                )
+            }
+
+            // 이미 파일이 존재한다면 삭제
+            if FileManager.default.fileExists(atPath: outputURL.path) {
+                try FileManager.default.removeItem(at: outputURL)
+            }
+
+            // AVAssetWriter 설정
+            let assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
+
+            // 비디오 설정
+            let videoSettings: [String: Any] = [
+                AVVideoCodecKey: AVVideoCodecType.h264,
+                AVVideoWidthKey: originalSize.width,
+                AVVideoHeightKey: originalSize.height,
+                AVVideoCompressionPropertiesKey: [
+                    AVVideoAverageBitRateKey: videoBitRate,
+                    AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+                    AVVideoMaxKeyFrameIntervalKey: 60, // 키프레임 간격 늘리기
+                    AVVideoExpectedSourceFrameRateKey: Int(originalVideoInfo.frameRate ?? 30) // 원본 프레임레이트 사용
+                ]
+            ]
+
+            // 비디오 입력 설정
+            let videoWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
+            videoWriterInput.expectsMediaDataInRealTime = false
+            videoWriterInput.transform = videoTrack.preferredTransform
+
+            if assetWriter.canAdd(videoWriterInput) {
+                assetWriter.add(videoWriterInput)
+            } else {
+                completion(.failure(CommonUtilCompressionError.exportSessionFailure("비디오 입력을 추가할 수 없음")))
+                return
+            }
+
+            // 오디오 설정 및 입력 추가 (오디오 트랙이 있는 경우)
+            var audioWriterInput: AVAssetWriterInput?
+            if audioTrackExists {
+                let audioSettings: [String: Any] = [
+                    AVFormatIDKey: kAudioFormatMPEG4AAC,
+                    AVNumberOfChannelsKey: audioChannels,
+                    AVSampleRateKey: audioSampleRate,
+                    AVEncoderBitRateKey: audioBitRate
+                ]
+
+                audioWriterInput = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
+                audioWriterInput?.expectsMediaDataInRealTime = false
+
+                if let audioInput = audioWriterInput, assetWriter.canAdd(audioInput) {
+                    assetWriter.add(audioInput)
+                }
+            }
+
+            // 에셋 리더 설정
+            let assetReader = try AVAssetReader(asset: composition)
+
+            // 비디오 출력 설정
+            let videoReaderOutput = AVAssetReaderTrackOutput(
+                track: compositionVideoTrack,
+                outputSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]
+            )
+
+            if assetReader.canAdd(videoReaderOutput) {
+                assetReader.add(videoReaderOutput)
+            } else {
+                completion(.failure(CommonUtilCompressionError.exportSessionFailure("비디오 출력을 추가할 수 없음")))
+                return
+            }
+
+            // 오디오 출력 설정 (오디오 트랙이 있는 경우)
+            var audioReaderOutput: AVAssetReaderTrackOutput?
+            if audioTrackExists, let audioTrack = composition.tracks(withMediaType: .audio).first {
+                audioReaderOutput = AVAssetReaderTrackOutput(
+                    track: audioTrack,
+                    outputSettings: [AVFormatIDKey: kAudioFormatLinearPCM]
+                )
+
+                if let audioOutput = audioReaderOutput, assetReader.canAdd(audioOutput) {
+                    assetReader.add(audioOutput)
+                }
+            }
+
+            // 처리 시작
+            assetReader.startReading()
+            assetWriter.startWriting()
+            assetWriter.startSession(atSourceTime: .zero)
+
+            // 디스패치 그룹 생성
+            let processingGroup = DispatchGroup()
+
+            // 비디오 처리
+            processingGroup.enter()
+            videoWriterInput.requestMediaDataWhenReady(on: DispatchQueue(label: "videoCompression.queue")) {
+                while videoWriterInput.isReadyForMoreMediaData {
+                    if let sampleBuffer = videoReaderOutput.copyNextSampleBuffer() {
+                        videoWriterInput.append(sampleBuffer)
+                    } else {
+                        videoWriterInput.markAsFinished()
+                        processingGroup.leave()
+                        break
+                    }
+                }
+            }
+
+            // 오디오 처리 (오디오 트랙이 있는 경우)
+            if let audioWriterInput = audioWriterInput, let audioReaderOutput = audioReaderOutput {
+                processingGroup.enter()
+                audioWriterInput.requestMediaDataWhenReady(on: DispatchQueue(label: "audioCompression.queue")) {
+                    while audioWriterInput.isReadyForMoreMediaData {
+                        if let sampleBuffer = audioReaderOutput.copyNextSampleBuffer() {
+                            audioWriterInput.append(sampleBuffer)
+                        } else {
+                            audioWriterInput.markAsFinished()
+                            processingGroup.leave()
+                            break
+                        }
+                    }
+                }
+            }
+
+            // 모든 처리가 완료되면 압축 완료
+            processingGroup.notify(queue: DispatchQueue.main) {
+                if assetReader.status == .completed {
+                    assetWriter.finishWriting {
+                        if assetWriter.status == .completed {
+                            // 압축 결과 파일 크기 확인
+                            let compressedSize = self.getFileSize(filePath: outputURL.path).int64Value
+                            let compressionRatio = Double(compressedSize) / Double(originalFileSize) * 100
+
+                            DebugLog("원본 파일 크기: \(originalFileSize / 1024 / 1024) MB")
+                            DebugLog("압축 파일 크기: \(compressedSize / 1024 / 1024) MB")
+                            DebugLog("압축률: \(compressionRatio)%")
+
+                            completion(.success(outputURL))
+                        } else {
+                            let error = assetWriter.error ?? CommonUtilCompressionError.unknownError
+                            completion(.failure(error))
+                        }
+                    }
+                } else {
+                    let error = assetReader.error ?? CommonUtilCompressionError.unknownError
+                    completion(.failure(error))
+                }
+            }
+        } catch {
+            completion(.failure(error))
+        }
+    }
+}
+
+private extension FourCharCode {
+    func toString() -> String? {
+        let n = self
+        let c1 = Character(UnicodeScalar((n >> 24) & 255)!)
+        let c2 = Character(UnicodeScalar((n >> 16) & 255)!)
+        let c3 = Character(UnicodeScalar((n >> 8) & 255)!)
+        let c4 = Character(UnicodeScalar(n & 255)!)
+        return "\(c1)\(c2)\(c3)\(c4)"
+    }
 }
 
 // MARK: - Kingfisher, ProgressHUD Config
