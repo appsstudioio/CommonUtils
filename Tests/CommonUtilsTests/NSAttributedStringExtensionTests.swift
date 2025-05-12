@@ -709,5 +709,60 @@ final class NSAttributedStringExtensionsTests: XCTestCase {
         XCTAssertGreaterThan(size.height, 0)
         XCTAssertGreaterThan(lines, 0)
     }
-}
 
+    // MARK: - extractAndRemoveImageAttachments
+    func test_extractAndRemoveImageAttachments_withSingleImage() throws {
+        let image = UIImage.makeColorImage(color: .red)
+        let attachment = NSTextAttachment()
+        attachment.image = image
+        let attrString = NSMutableAttributedString(attachment: attachment)
+        let extracted = attrString.extractAndRemoveImageAttachments
+        XCTAssertEqual(extracted.count, 1)
+        XCTAssertTrue(attrString.string.isEmpty)
+    }
+
+    func test_extractAndRemoveImageAttachments_withMultipleImages() throws {
+        let attrString = NSMutableAttributedString()
+        for _ in 0..<3 {
+            let image = UIImage.makeColorImage(color: .green)
+            let attachment = NSTextAttachment()
+            attachment.image = image
+            attrString.append(NSAttributedString(attachment: attachment))
+        }
+
+        let extracted = attrString.extractAndRemoveImageAttachments
+        XCTAssertEqual(extracted.count, 3)
+        XCTAssertTrue(attrString.string.isEmpty)
+    }
+
+    func test_extractAndRemoveImageAttachments_withNoImage() throws {
+        let attrString = NSMutableAttributedString(string: "No image here.")
+        let extracted = attrString.extractAndRemoveImageAttachments
+        XCTAssertTrue(extracted.isEmpty)
+        XCTAssertEqual(attrString.string, "No image here.")
+    }
+
+    func test_extractAndRemoveImageAttachments_withMixedContent() throws {
+        let text = NSMutableAttributedString(string: "Before ")
+        let image = UIImage.makeColorImage(color: .blue)
+        let attachment = NSTextAttachment()
+        attachment.image = image
+        text.append(NSAttributedString(attachment: attachment))
+        text.append(NSAttributedString(string: " After"))
+
+        let extracted = text.extractAndRemoveImageAttachments
+        XCTAssertEqual(extracted.count, 1)
+        XCTAssertEqual(text.string, "Before  After")
+    }
+
+    func test_extractAndRemoveImageAttachments_withDataImage() throws {
+        let image = UIImage.makeColorImage(color: .yellow)
+        let attachment = NSTextAttachment()
+        attachment.contents = image.pngData()
+        let attrString = NSMutableAttributedString(attachment: attachment)
+
+        let extracted = attrString.extractAndRemoveImageAttachments
+        XCTAssertEqual(extracted.count, 1)
+        XCTAssertTrue(attrString.string.isEmpty)
+    }
+}
