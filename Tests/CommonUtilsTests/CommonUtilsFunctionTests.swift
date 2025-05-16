@@ -11,9 +11,17 @@ import AVFoundation
 
 final class CommonUtilsFunctionTests: XCTestCase {
 
-    // MARK: - Helper to load video URL from bundle or temp
+    // MARK: - Helpers
+    // load video URL from bundle or temp
     private func loadTestVideo(named name: String, withExtension ext: String = "mp4") -> URL? {
         return Bundle.module.url(forResource: name, withExtension: ext)
+    }
+
+    private func createTempFile(named fileName: String, withExtension ext: String, contents: Data = Data("테스트".utf8)) throws -> URL {
+        let tempDirectory = FileManager.default.temporaryDirectory
+        let fileURL = tempDirectory.appendingPathComponent("\(fileName).\(ext)")
+        try contents.write(to: fileURL)
+        return fileURL
     }
 
     // MARK: - Test: MP4 - Standard 1080p video
@@ -79,6 +87,59 @@ final class CommonUtilsFunctionTests: XCTestCase {
         XCTAssertEqual(info.duration, 0)
         XCTAssertNil(info.resolution)
         XCTAssertNil(info.videoCodec)
+    }
+
+    // MARK: - renamedTempFileURL Tests
+    func testRenameTempFile_shouldReturnNewURLWithNewName() throws {
+        let originalURL = try createTempFile(named: "originalFile", withExtension: "txt")
+        let renamedFileName = "renamedFile"
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: originalURL, renamedFileName: renamedFileName)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.lastPathComponent, "renamedFile.txt")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result!.path))
+    }
+
+    func testRenameTempFile_shouldOverwriteIfFileAlreadyExists() throws {
+        let originalURL = try createTempFile(named: "duplicateFile", withExtension: "log", contents: Data("원본".utf8))
+        let renamedFileName = "duplicateRenamed"
+
+        let _ = try createTempFile(named: renamedFileName, withExtension: "log", contents: Data("기존".utf8)) // 이미 있는 파일
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: originalURL, renamedFileName: renamedFileName)
+
+        XCTAssertNotNil(result)
+        let newContents = try String(contentsOf: result!)
+        XCTAssertEqual(newContents, "원본") // 기존 파일이 덮어쓰기 되었는지 확인
+    }
+
+    func testRenameTempFile_shouldFailIfOriginalFileDoesNotExist() throws {
+        let nonExistentURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("존재하지않는파일.txt")
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: nonExistentURL, renamedFileName: "newName")
+
+        XCTAssertNil(result)
+    }
+
+    func testRenameTempFile_shouldPreserveFileExtension() throws {
+        let originalURL = try createTempFile(named: "imageFile", withExtension: "jpg")
+        let renamedFileName = "shared_image"
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: originalURL, renamedFileName: renamedFileName)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.pathExtension, "jpg")
+    }
+
+    func testRenameTempFile_shouldWorkWithUnicodeFileNames() throws {
+        let originalURL = try createTempFile(named: "한글_파일", withExtension: "txt")
+        let renamedFileName = "공유용_파일"
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: originalURL, renamedFileName: renamedFileName)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.lastPathComponent, "공유용_파일.txt")
     }
 }
 
@@ -188,5 +249,4 @@ final class VideoCompressionTests: XCTestCase {
 
         wait(for: [expectation], timeout: 30)
     }
-
 }

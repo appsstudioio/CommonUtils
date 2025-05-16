@@ -535,6 +535,25 @@ public class CommonUtils {
             completion(.failure(error))
         }
     }
+
+    static public func renamedTempFileURL(originalFileURL: URL, renamedFileName: String) -> URL? {
+        let fileManager = FileManager.default
+        let tempDirectory = fileManager.temporaryDirectory
+
+        let fileExtension = originalFileURL.pathExtension
+        let renamedFileURL = tempDirectory.appendingPathComponent("\(renamedFileName).\(fileExtension)")
+
+        do {
+            if fileManager.fileExists(atPath: renamedFileURL.path) {
+                try fileManager.removeItem(at: renamedFileURL)
+            }
+            try fileManager.copyItem(at: originalFileURL, to: renamedFileURL)
+            return renamedFileURL
+        } catch {
+            DebugLog("파일 이름 변경 실패: \(error.localizedDescription)")
+            return nil
+        }
+    }
 }
 
 private extension FourCharCode {
@@ -627,10 +646,15 @@ public extension CommonUtils {
         let waitGroup = DispatchGroup()
         showLoadingView()
         paths.forEach {
-            if let url = CommonUtils.createUrlPath(hostURL, path: $0) {
-                waitGroup.enter()
+            guard let url = CommonUtils.createUrlPath(hostURL, path: $0) else { return }
+            waitGroup.enter()
 
-                ImageDownloader.default.downloadImage(with: url, options: []) { result in
+            ImageDownloader.default.downloadImage(with: url, options: []) { result in
+                // 공유 배열에 접근은 이 안에서만
+                syncQueue.async {
+                    defer {
+                        waitGroup.leave()
+                    }
                     var imageToAppend: UIImage?
                     var dataToAppend: Data?
 
@@ -650,13 +674,9 @@ public extension CommonUtils {
                         DebugLog("Job failed: \(error.localizedDescription)")
                     }
 
-                    // 공유 배열에 접근은 이 안에서만
-                    syncQueue.async {
-                        if let image = imageToAppend, let data = dataToAppend {
-                            images.append(image)
-                            imageDatas.append(data)
-                        }
-                        waitGroup.leave()
+                    if let image = imageToAppend, let data = dataToAppend {
+                        images.append(image)
+                        imageDatas.append(data)
                     }
                 }
             }

@@ -358,6 +358,20 @@ public extension String {
             self.draw(in: textRect, withAttributes: attributes)
         }
     }
+
+    ///  확장자를  반환합니다.
+    var fileExtension: String? {
+        let url = URL(fileURLWithPath: self)
+        let ext = url.pathExtension
+        return ext.isEmpty ? nil : ext
+    }
+
+    /// 파일 경로 또는 파일명에서 확장자를 제외한 파일 이름을 반환합니다.
+    var fileName: String {
+        let url = URL(fileURLWithPath: self)
+        return url.deletingPathExtension().lastPathComponent
+    }
+
 }
 
 public extension Character {
