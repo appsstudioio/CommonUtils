@@ -11,9 +11,17 @@ import AVFoundation
 
 final class CommonUtilsFunctionTests: XCTestCase {
 
-    // MARK: - Helper to load video URL from bundle or temp
+    // MARK: - Helpers
+    // load video URL from bundle or temp
     private func loadTestVideo(named name: String, withExtension ext: String = "mp4") -> URL? {
         return Bundle.module.url(forResource: name, withExtension: ext)
+    }
+
+    private func createTempFile(named fileName: String, withExtension ext: String, contents: Data = Data("테스트".utf8)) throws -> URL {
+        let tempDirectory = FileManager.default.temporaryDirectory
+        let fileURL = tempDirectory.appendingPathComponent("\(fileName).\(ext)")
+        try contents.write(to: fileURL)
+        return fileURL
     }
 
     // MARK: - Test: MP4 - Standard 1080p video
@@ -79,6 +87,59 @@ final class CommonUtilsFunctionTests: XCTestCase {
         XCTAssertEqual(info.duration, 0)
         XCTAssertNil(info.resolution)
         XCTAssertNil(info.videoCodec)
+    }
+
+    // MARK: - renamedTempFileURL Tests
+    func testRenameTempFile_shouldReturnNewURLWithNewName() throws {
+        let originalURL = try createTempFile(named: "originalFile", withExtension: "txt")
+        let renamedFileName = "renamedFile"
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: originalURL, renamedFileName: renamedFileName)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.lastPathComponent, "renamedFile.txt")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result!.path))
+    }
+
+    func testRenameTempFile_shouldOverwriteIfFileAlreadyExists() throws {
+        let originalURL = try createTempFile(named: "duplicateFile", withExtension: "log", contents: Data("원본".utf8))
+        let renamedFileName = "duplicateRenamed"
+
+        let _ = try createTempFile(named: renamedFileName, withExtension: "log", contents: Data("기존".utf8)) // 이미 있는 파일
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: originalURL, renamedFileName: renamedFileName)
+
+        XCTAssertNotNil(result)
+        let newContents = try String(contentsOf: result!)
+        XCTAssertEqual(newContents, "원본") // 기존 파일이 덮어쓰기 되었는지 확인
+    }
+
+    func testRenameTempFile_shouldFailIfOriginalFileDoesNotExist() throws {
+        let nonExistentURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("존재하지않는파일.txt")
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: nonExistentURL, renamedFileName: "newName")
+
+        XCTAssertNil(result)
+    }
+
+    func testRenameTempFile_shouldPreserveFileExtension() throws {
+        let originalURL = try createTempFile(named: "imageFile", withExtension: "jpg")
+        let renamedFileName = "shared_image"
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: originalURL, renamedFileName: renamedFileName)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.pathExtension, "jpg")
+    }
+
+    func testRenameTempFile_shouldWorkWithUnicodeFileNames() throws {
+        let originalURL = try createTempFile(named: "한글_파일", withExtension: "txt")
+        let renamedFileName = "공유용_파일"
+
+        let result = CommonUtils.renamedTempFileURL(originalFileURL: originalURL, renamedFileName: renamedFileName)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.lastPathComponent, "공유용_파일.txt")
     }
 }
 
@@ -189,4 +250,103 @@ final class VideoCompressionTests: XCTestCase {
         wait(for: [expectation], timeout: 30)
     }
 
+    // MARK: - validateHTML Tests
+    func testValidateHTML_validHTML_returnsTrue() throws {
+        let html = """
+        <html>
+          <head><title>Test</title></head>
+          <body><p>Hello, world!</p></body>
+        </html>
+        """
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertTrue(isValid)
+    }
+
+    func testValidateHTML_containsScriptAndStyle_tagsRemoved_returnsTrue() throws {
+        let html = """
+        <html>
+          <head>
+            <style>body { font-size: 12px; }</style>
+            <script>alert("hi");</script>
+          </head>
+          <body><p>Clean body</p></body>
+        </html>
+        """
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertTrue(isValid)
+    }
+
+    func testValidateHTML_emptyString_returnsFalse() throws {
+        let html = ""
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertFalse(isValid)
+    }
+
+    func testValidateHTML_missingHeadTag_returnsFalse() throws {
+        let html = "<html><body>Content</body></html>"
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertFalse(isValid)
+    }
+
+    func testValidateHTML_missingBodyTag_returnsFalse() throws {
+        let html = "<html><head></head></html>"
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertFalse(isValid)
+    }
+
+    func testValidateHTML_closingHtmlOnly_returnsFalse() throws {
+        let html = "</html><head></head><body>Content</body>"
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertFalse(isValid)
+    }
+
+    func testValidateHTML_uppercasedTags_returnsTrue() throws {
+        let html = "<HTML><HEAD></HEAD><BODY>Test</BODY></HTML>"
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertTrue(isValid)
+    }
+
+    // Success Case
+    func testValidateHTML_validFullHTML_returnsTrue() throws {
+        let html = """
+        <html lang="ko">
+            <head>
+                <title>테스트</title>
+                <meta charset="UTF-8">
+            </head>
+            <body>
+                <p>본문입니다.</p>
+            </body>
+        </html>
+        """
+        XCTAssertTrue(CommonUtils.validateHTML(html: html))
+    }
+
+    // Missing <html> Tag
+    func testValidateHTML_missingHtmlTag_returnsFalse() throws {
+        let html = """
+        <head>
+            <title>제목</title>
+        </head>
+        <body>
+            <p>본문</p>
+        </body>
+        """
+        XCTAssertFalse(CommonUtils.validateHTML(html: html))
+    }
+
+    // Incorrect Tag Order
+    func testValidateHTML_invalidTagOrder_returnsFalse() throws {
+        let html = """
+        <html>
+            <body>
+                <p>본문</p>
+            </body>
+            <head>
+                <title>제목</title>
+            </head>
+        </html>
+        """
+        XCTAssertFalse(CommonUtils.validateHTML(html: html))
+    }
 }

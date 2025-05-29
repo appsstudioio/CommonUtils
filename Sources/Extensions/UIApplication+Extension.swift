@@ -23,6 +23,10 @@ public extension UIApplication {
             .first
     }
 
+    static var sceneDelegate: UISceneDelegate? {
+        return self.shared.connectedScenes.first?.delegate as? UISceneDelegate
+    }
+
     var statusBar: CGRect {
         return self.windowScene?.statusBarManager?.statusBarFrame ?? .zero
     }

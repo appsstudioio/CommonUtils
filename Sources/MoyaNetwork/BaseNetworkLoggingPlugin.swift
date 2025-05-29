@@ -80,7 +80,7 @@ extension BaseNetworkLoggingPlugin {
             output.append(configuration.formatter.entry("HTTP Request Method", httpMethod, target))
         }
 
-        output.append(configuration.formatter.entry("######## [END REQUEST] ", "[\(httpRequest.description)] ##################################################################", target))
+        output.append(configuration.formatter.entry("######## [END REQUEST] ", "[\(httpRequest.description)] ##################################################################\n\n", target))
         completion(output)
     }
 
@@ -101,7 +101,7 @@ extension BaseNetworkLoggingPlugin {
             // let stringOutput = configuration.formatter.responseData(response.data)
             output.append(configuration.formatter.entry("Response Body", response.data.toPrettyString, target))
         }
-        output.append(configuration.formatter.entry("######## [END RESPONSE] ", "##################################################################", target))
+        output.append(configuration.formatter.entry("######## [END RESPONSE] ", "##################################################################\n\n", target))
         return output
     }
 

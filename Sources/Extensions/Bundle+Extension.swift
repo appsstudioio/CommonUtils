@@ -19,7 +19,7 @@ public extension Bundle {
     }
     
     static func getInfoPlistValue(forKey key: InfoPlistKey) -> String {
-        return (self.main.infoDictionary?[key.rawValue] as? String)?.replacingOccurrences(of: "\\", with: "") ?? ""
+        return self.getInfoPlistValue(forKeyString: key.rawValue)
     }
     
     static func getInfoPlistValue(forKeyString key: String) -> String {

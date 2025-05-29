@@ -273,6 +273,42 @@ final class StringExtensionTests: XCTestCase {
         XCTAssertEqual(result, "2025-04-15")
     }
 
+    // MARK: - isParsableHTML
+    // Valid HTML
+    func testIsParsableHTML_validMinimalHTML_returnsTrue() throws {
+        let html = "<html><body><p>Hello</p></body></html>"
+        XCTAssertTrue(html.isParsableHTML)
+    }
+
+    func testIsParsableHTML_validWithStyleAndScript_returnsTrue() throws {
+        let html = """
+        <html>
+          <head>
+            <style>p { color: red; }</style>
+            <script>alert('hello');</script>
+          </head>
+          <body><p>Hi</p></body>
+        </html>
+        """
+        XCTAssertTrue(html.isParsableHTML)
+    }
+
+    func testIsParsableHTML_uppercaseTags_returnsTrue() throws {
+        let html = "<HTML><BODY><H1>HELLO</H1></BODY></HTML>"
+        XCTAssertTrue(html.isParsableHTML)
+    }
+
+    // Edge cases
+    func testIsParsableHTML_emptyString_returnsFalse() throws {
+        let html = ""
+        XCTAssertFalse(html.isParsableHTML)
+    }
+
+    func testIsParsableHTML_plainTextOnly_returnsTrue() throws {
+        let html = "Just some text"
+        XCTAssertTrue(html.isParsableHTML) // NSAttributedString can parse plain text
+    }
+
     // MARK: - html2MutableAttributed
     func test_html2MutableAttributed_validHTML() throws {
         let html = "<b>Bold</b>"
@@ -603,5 +639,57 @@ final class StringExtensionTests: XCTestCase {
     func testIsEmoji_withNonEmojiCharacter() throws {
         XCTAssertFalse("A".first!.isEmoji)
         XCTAssertFalse("1".first!.isEmoji)
+    }
+
+    // MARK: - fileExtension
+    func testFileWithExtension() throws {
+        let filename = "document.pdf"
+        XCTAssertEqual(filename.fileExtension, "pdf")
+    }
+
+    func testFileWithoutExtension() throws {
+        let filename = "README"
+        XCTAssertNil(filename.fileExtension)
+    }
+
+    func testHiddenFileWithExtension() throws {
+        let filename = ".gitignore"
+        XCTAssertNil(filename.fileExtension)
+    }
+
+    func testFileWithMultipleDots() throws {
+        let filename = "archive.tar.gz"
+        XCTAssertEqual(filename.fileExtension, "gz")
+    }
+
+    func testFileEndingWithDot() throws {
+        let filename = "filename."
+        XCTAssertNil(filename.fileExtension)
+    }
+
+    // MARK: - fileName
+    func testFileNameWithExtension() throws {
+        let filename = "document.pdf"
+        XCTAssertEqual(filename.fileName, "document")
+    }
+
+    func testFileNameWithoutExtension() throws {
+        let filename = "README"
+        XCTAssertEqual(filename.fileName, "README")
+    }
+
+    func testFileNameHiddenFileWithExtension() throws {
+        let filename = ".gitignore"
+        XCTAssertEqual(filename.fileName, ".gitignore")
+    }
+
+    func testFileNameWithMultipleDots() throws {
+        let filename = "archive.tar.gz"
+        XCTAssertEqual(filename.fileName, "archive.tar")
+    }
+
+    func testFilePath() throws {
+        let filepath = "/Users/test/Desktop/photo.jpg"
+        XCTAssertEqual(filepath.fileName, "photo")
     }
 }

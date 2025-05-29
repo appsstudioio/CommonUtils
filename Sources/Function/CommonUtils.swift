@@ -535,6 +535,65 @@ public class CommonUtils {
             completion(.failure(error))
         }
     }
+
+    static public func renamedTempFileURL(originalFileURL: URL, renamedFileName: String) -> URL? {
+        let fileManager = FileManager.default
+        let tempDirectory = fileManager.temporaryDirectory
+
+        let fileExtension = originalFileURL.pathExtension
+        let renamedFileURL = tempDirectory.appendingPathComponent("\(renamedFileName).\(fileExtension)")
+
+        do {
+            if fileManager.fileExists(atPath: renamedFileURL.path) {
+                try fileManager.removeItem(at: renamedFileURL)
+            }
+            try fileManager.copyItem(at: originalFileURL, to: renamedFileURL)
+            return renamedFileURL
+        } catch {
+            DebugLog("파일 이름 변경 실패: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// HTML 문자열의 유효성을 확인하고, 정제된 문자열을 반환
+    static public func validateHTML(html: String) -> Bool {
+        let trimmedHTML = html.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedHTML.isEmpty else {
+            DebugLog("HTML 문자열이 비어 있음", level: .error)
+            return false
+        }
+
+        // UTF-8 인코딩 가능 여부
+        guard trimmedHTML.data(using: .utf8) != nil else {
+            DebugLog("UTF-8 인코딩 실패", level: .error, param: ["html": html])
+            return false
+        }
+
+        // 정제
+        var sanitizedHTML = trimmedHTML.lowercased()
+        sanitizedHTML = sanitizedHTML.replacingOccurrences(of: "<script[^>]*>.*?</script>", with: "", options: .regularExpression)
+        sanitizedHTML = sanitizedHTML.replacingOccurrences(of: "<style[^>]*>.*?</style>", with: "", options: .regularExpression)
+        sanitizedHTML = sanitizedHTML.replacingOccurrences(of: "<meta[^>]*>", with: "", options: .regularExpression)
+
+        // 필수 태그 순서 확인
+        guard
+            let htmlIndex = sanitizedHTML.range(of: "<html")?.lowerBound,
+            let headIndex = sanitizedHTML.range(of: "<head")?.lowerBound,
+            let bodyIndex = sanitizedHTML.range(of: "<body")?.lowerBound
+        else {
+            DebugLog("필수 태그 누락 -> [\(html)]", level: .error)
+            return false
+        }
+
+        let indices = [htmlIndex, headIndex, bodyIndex]
+        let isOrdered = indices == indices.sorted(by: { $0 < $1 })
+        guard isOrdered else {
+            DebugLog("태그 순서가 잘못됨 -> [\(html)]", level: .error)
+            return false
+        }
+
+        return true
+    }
 }
 
 private extension FourCharCode {
@@ -627,10 +686,15 @@ public extension CommonUtils {
         let waitGroup = DispatchGroup()
         showLoadingView()
         paths.forEach {
-            if let url = CommonUtils.createUrlPath(hostURL, path: $0) {
-                waitGroup.enter()
+            guard let url = CommonUtils.createUrlPath(hostURL, path: $0) else { return }
+            waitGroup.enter()
 
-                ImageDownloader.default.downloadImage(with: url, options: []) { result in
+            ImageDownloader.default.downloadImage(with: url, options: []) { result in
+                // 공유 배열에 접근은 이 안에서만
+                syncQueue.async {
+                    defer {
+                        waitGroup.leave()
+                    }
                     var imageToAppend: UIImage?
                     var dataToAppend: Data?
 
@@ -650,13 +714,9 @@ public extension CommonUtils {
                         DebugLog("Job failed: \(error.localizedDescription)")
                     }
 
-                    // 공유 배열에 접근은 이 안에서만
-                    syncQueue.async {
-                        if let image = imageToAppend, let data = dataToAppend {
-                            images.append(image)
-                            imageDatas.append(data)
-                        }
-                        waitGroup.leave()
+                    if let image = imageToAppend, let data = dataToAppend {
+                        images.append(image)
+                        imageDatas.append(data)
                     }
                 }
             }

@@ -156,19 +156,40 @@ public extension String {
 
     func toDate(format: String = "yyyy-MM-dd HH:mm:ss", locale: Locale = Locale.current, timeZone: TimeZone = TimeZone.current) -> Date? {
         let dateFormatter = DateFormatter()
-        dateFormatter.setKSTFormatter(format: format)
+        dateFormatter.setFormatter(format: format, timeZone: timeZone, locale: locale)
         return dateFormatter.date(from: self)
     }
     
     func dateFormatChange(_ currentFormat: String = "yyyy-MM-dd HH:mm:ss", changeFormat: String) -> String {
         let dateFormatter = DateFormatter()
-        dateFormatter.setKSTFormatter(format: currentFormat)
+        dateFormatter.setFormatter(format: currentFormat)
         let date =  dateFormatter.date(from: self)
         dateFormatter.dateFormat = changeFormat
         let dateStr = dateFormatter.string(from: date ?? Date())
         return dateStr
     }
-    
+
+    var isParsableHTML: Bool {
+        guard let data = self.data(using: .utf8), !self.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return false
+        }
+        var isValid = false
+        do {
+            let attrString = try NSAttributedString(
+                data: data,
+                options: [
+                    .documentType: NSAttributedString.DocumentType.html,
+                    .characterEncoding: String.Encoding.utf8.rawValue
+                ],
+                documentAttributes: nil
+            )
+            isValid = !attrString.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        } catch {
+            isValid = false
+        }
+        return isValid
+    }
+
     var html2MutableAttributed: NSMutableAttributedString? {
         do {
             guard let data = self.data(using: .utf8) else {
@@ -177,8 +198,10 @@ public extension String {
             }
             
             return try NSMutableAttributedString(data: data,
-                                                 options: [.documentType: NSMutableAttributedString.DocumentType.html,
-                                                           .characterEncoding: String.Encoding.utf8.rawValue],
+                                                 options: [
+                                                    .documentType: NSMutableAttributedString.DocumentType.html,
+                                                    .characterEncoding: String.Encoding.utf8.rawValue
+                                                 ],
                                                  documentAttributes: nil)
         } catch {
             DebugLog("Error creating attributed string: \(error.localizedDescription)")
@@ -193,8 +216,10 @@ public extension String {
         }
         do {
             let attributed = try NSAttributedString(data: encodedData,
-                                                    options: [ .documentType: NSAttributedString.DocumentType.html,
-                                                               .characterEncoding: String.Encoding.utf8.rawValue],
+                                                    options: [
+                                                        .documentType: NSAttributedString.DocumentType.html,
+                                                        .characterEncoding: String.Encoding.utf8.rawValue
+                                                    ],
                                                     documentAttributes: nil)
             return attributed.string
         } catch {
@@ -358,6 +383,20 @@ public extension String {
             self.draw(in: textRect, withAttributes: attributes)
         }
     }
+
+    ///  확장자를  반환합니다.
+    var fileExtension: String? {
+        let url = URL(fileURLWithPath: self)
+        let ext = url.pathExtension
+        return ext.isEmpty ? nil : ext
+    }
+
+    /// 파일 경로 또는 파일명에서 확장자를 제외한 파일 이름을 반환합니다.
+    var fileName: String {
+        let url = URL(fileURLWithPath: self)
+        return url.deletingPathExtension().lastPathComponent
+    }
+
 }
 
 public extension Character {
