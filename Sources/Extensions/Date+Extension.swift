@@ -48,7 +48,7 @@ public extension Date {
 
     func toString(format: String, timeZone: TimeZone = .current, locale: Locale = Locale.current) -> String {
         let dateFormatter = DateFormatter()
-        dateFormatter.setKSTFormatter(format: format)
+        dateFormatter.setFormatter(format: format, timeZone: timeZone, locale: locale)
         return dateFormatter.string(from: self)
     }
 

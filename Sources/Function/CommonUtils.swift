@@ -554,6 +554,46 @@ public class CommonUtils {
             return nil
         }
     }
+
+    /// HTML 문자열의 유효성을 확인하고, 정제된 문자열을 반환
+    static public func validateHTML(html: String) -> Bool {
+        let trimmedHTML = html.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedHTML.isEmpty else {
+            DebugLog("HTML 문자열이 비어 있음", level: .error)
+            return false
+        }
+
+        // UTF-8 인코딩 가능 여부
+        guard trimmedHTML.data(using: .utf8) != nil else {
+            DebugLog("UTF-8 인코딩 실패", level: .error, param: ["html": html])
+            return false
+        }
+
+        // 정제
+        var sanitizedHTML = trimmedHTML.lowercased()
+        sanitizedHTML = sanitizedHTML.replacingOccurrences(of: "<script[^>]*>.*?</script>", with: "", options: .regularExpression)
+        sanitizedHTML = sanitizedHTML.replacingOccurrences(of: "<style[^>]*>.*?</style>", with: "", options: .regularExpression)
+        sanitizedHTML = sanitizedHTML.replacingOccurrences(of: "<meta[^>]*>", with: "", options: .regularExpression)
+
+        // 필수 태그 순서 확인
+        guard
+            let htmlIndex = sanitizedHTML.range(of: "<html")?.lowerBound,
+            let headIndex = sanitizedHTML.range(of: "<head")?.lowerBound,
+            let bodyIndex = sanitizedHTML.range(of: "<body")?.lowerBound
+        else {
+            DebugLog("필수 태그 누락 -> [\(html)]", level: .error)
+            return false
+        }
+
+        let indices = [htmlIndex, headIndex, bodyIndex]
+        let isOrdered = indices == indices.sorted(by: { $0 < $1 })
+        guard isOrdered else {
+            DebugLog("태그 순서가 잘못됨 -> [\(html)]", level: .error)
+            return false
+        }
+
+        return true
+    }
 }
 
 private extension FourCharCode {

@@ -249,4 +249,104 @@ final class VideoCompressionTests: XCTestCase {
 
         wait(for: [expectation], timeout: 30)
     }
+
+    // MARK: - validateHTML Tests
+    func testValidateHTML_validHTML_returnsTrue() throws {
+        let html = """
+        <html>
+          <head><title>Test</title></head>
+          <body><p>Hello, world!</p></body>
+        </html>
+        """
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertTrue(isValid)
+    }
+
+    func testValidateHTML_containsScriptAndStyle_tagsRemoved_returnsTrue() throws {
+        let html = """
+        <html>
+          <head>
+            <style>body { font-size: 12px; }</style>
+            <script>alert("hi");</script>
+          </head>
+          <body><p>Clean body</p></body>
+        </html>
+        """
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertTrue(isValid)
+    }
+
+    func testValidateHTML_emptyString_returnsFalse() throws {
+        let html = ""
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertFalse(isValid)
+    }
+
+    func testValidateHTML_missingHeadTag_returnsFalse() throws {
+        let html = "<html><body>Content</body></html>"
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertFalse(isValid)
+    }
+
+    func testValidateHTML_missingBodyTag_returnsFalse() throws {
+        let html = "<html><head></head></html>"
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertFalse(isValid)
+    }
+
+    func testValidateHTML_closingHtmlOnly_returnsFalse() throws {
+        let html = "</html><head></head><body>Content</body>"
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertFalse(isValid)
+    }
+
+    func testValidateHTML_uppercasedTags_returnsTrue() throws {
+        let html = "<HTML><HEAD></HEAD><BODY>Test</BODY></HTML>"
+        let isValid = CommonUtils.validateHTML(html: html)
+        XCTAssertTrue(isValid)
+    }
+
+    // Success Case
+    func testValidateHTML_validFullHTML_returnsTrue() throws {
+        let html = """
+        <html lang="ko">
+            <head>
+                <title>테스트</title>
+                <meta charset="UTF-8">
+            </head>
+            <body>
+                <p>본문입니다.</p>
+            </body>
+        </html>
+        """
+        XCTAssertTrue(CommonUtils.validateHTML(html: html))
+    }
+
+    // Missing <html> Tag
+    func testValidateHTML_missingHtmlTag_returnsFalse() throws {
+        let html = """
+        <head>
+            <title>제목</title>
+        </head>
+        <body>
+            <p>본문</p>
+        </body>
+        """
+        XCTAssertFalse(CommonUtils.validateHTML(html: html))
+    }
+
+    // Incorrect Tag Order
+    func testValidateHTML_invalidTagOrder_returnsFalse() throws {
+        let html = """
+        <html>
+            <body>
+                <p>본문</p>
+            </body>
+            <head>
+                <title>제목</title>
+            </head>
+        </html>
+        """
+        XCTAssertFalse(CommonUtils.validateHTML(html: html))
+    }
 }

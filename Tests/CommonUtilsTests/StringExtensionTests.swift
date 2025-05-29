@@ -273,6 +273,42 @@ final class StringExtensionTests: XCTestCase {
         XCTAssertEqual(result, "2025-04-15")
     }
 
+    // MARK: - isParsableHTML
+    // Valid HTML
+    func testIsParsableHTML_validMinimalHTML_returnsTrue() throws {
+        let html = "<html><body><p>Hello</p></body></html>"
+        XCTAssertTrue(html.isParsableHTML)
+    }
+
+    func testIsParsableHTML_validWithStyleAndScript_returnsTrue() throws {
+        let html = """
+        <html>
+          <head>
+            <style>p { color: red; }</style>
+            <script>alert('hello');</script>
+          </head>
+          <body><p>Hi</p></body>
+        </html>
+        """
+        XCTAssertTrue(html.isParsableHTML)
+    }
+
+    func testIsParsableHTML_uppercaseTags_returnsTrue() throws {
+        let html = "<HTML><BODY><H1>HELLO</H1></BODY></HTML>"
+        XCTAssertTrue(html.isParsableHTML)
+    }
+
+    // Edge cases
+    func testIsParsableHTML_emptyString_returnsFalse() throws {
+        let html = ""
+        XCTAssertFalse(html.isParsableHTML)
+    }
+
+    func testIsParsableHTML_plainTextOnly_returnsTrue() throws {
+        let html = "Just some text"
+        XCTAssertTrue(html.isParsableHTML) // NSAttributedString can parse plain text
+    }
+
     // MARK: - html2MutableAttributed
     func test_html2MutableAttributed_validHTML() throws {
         let html = "<b>Bold</b>"

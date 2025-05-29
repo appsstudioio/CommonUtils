@@ -79,6 +79,7 @@ public enum CommonUtilCompressionQuality {
     case low
     case medium
     case high
+    case original
 
     // 원본 비트레이트 대비 압축 비율 (%)
     var compressionRatio: Float {
@@ -86,6 +87,7 @@ public enum CommonUtilCompressionQuality {
         case .low: return 0.5     // 원본의 50%
         case .medium: return 0.7  // 원본의 70%
         case .high: return 0.9    // 원본의 90%
+        case .original: return 1.0  // 원본의 100%
         }
     }
 
@@ -95,6 +97,7 @@ public enum CommonUtilCompressionQuality {
         case .low: return 1_000_000    // 최소 1 Mbps
         case .medium: return 2_000_000 // 최소 2 Mbps
         case .high: return 3_000_000   // 최소 3 Mbps
+        case .original: return 4_000_000   // 최소 4 Mbps
         }
     }
 }
