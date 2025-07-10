@@ -251,7 +251,7 @@ public class CommonUtils {
         // 기존 비디오 정보 가져오기
         let originalVideoInfo = self.extractVideoInfo(from: inputURL)
         let originalSize = videoTrack.naturalSize
-        let duration = originalVideoInfo.duration ?? CMTimeGetSeconds(asset.duration)
+        let duration = originalVideoInfo.duration
 
         // 원본 파일 크기 확인
         let originalFileSize = self.getFileSize(filePath: inputURL.path).int64Value

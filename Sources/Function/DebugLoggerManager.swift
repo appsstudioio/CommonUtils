@@ -230,12 +230,16 @@ public final class DebugLoggerManager {
         let logFiles = getAllLogFiles()
         guard !logFiles.isEmpty else { return nil }
 
-        guard let archive = Archive(url: zipFileURL, accessMode: .create) else { return nil }
-
-        for file in logFiles {
-            try? archive.addEntry(with: file.lastPathComponent, relativeTo: logDirectory)
+        do {
+            let archive = try Archive(url: zipFileURL, accessMode: .create)
+            // archive 사용
+            for file in logFiles {
+                try? archive.addEntry(with: file.lastPathComponent, relativeTo: logDirectory)
+            }
+            return zipFileURL
+        } catch {
+            DebugLog("Failed to create archive: \(error)", level: .error)
+            return nil
         }
-
-        return zipFileURL
     }
 }
