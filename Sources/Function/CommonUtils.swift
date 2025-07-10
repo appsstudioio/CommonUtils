@@ -2,7 +2,6 @@
 // https://docs.swift.org/swift-book
 import Foundation
 import SystemConfiguration
-import os.log
 import UIKit
 import CoreTelephony
 import Photos
@@ -13,76 +12,6 @@ import Kingfisher
 #if canImport(ProgressHUD)
 import ProgressHUD
 #endif
-
-public enum DebugLogLevel: String {
-    case debug, info, error, log, trace, notice, warning, critical, fault
-}
-
-@available(iOS 14.0, *)
-private var loggerCache = [String: Logger]()
-private let loggerQueue = DispatchQueue(label: "debug.log.queue")
-
-@available(iOS 14.0, *)
-private func getLogger(subsystem: String, category: String) -> Logger {
-    let key = "\(subsystem)_\(category)"
-    return loggerQueue.sync {
-        if let cached = loggerCache[key] {
-            return cached
-        } else {
-            let newLogger = Logger(subsystem: subsystem, category: category)
-            loggerCache[key] = newLogger
-            return newLogger
-        }
-    }
-}
-
-public func DebugLog(_ message: Any? = "",
-                     level: DebugLogLevel = .info,
-                     file: String = #file,
-                     funcName: String = #function,
-                     line: Int = #line,
-                     param: [String: Any] = [:]) {
-#if DEBUG
-    let fileName: String = (file as NSString).lastPathComponent
-    var fullMessage = """
-    [파일: \(fileName), 라인: \(line), 함수: \(funcName)]
-    \(String(describing: message))
-    """
-
-    if !param.isEmpty {
-        fullMessage += "\n[추가 정보: \(param.toJsonString)]"
-    }
-
-
-    if #available(iOS 14.0, *) {
-        // Xcode15 로깅 기능 추가. https://ios-development.tistory.com/381
-        let subsystem = CommonUtils.getBundleIdentifier
-        let logger = getLogger(subsystem: subsystem, category: level.rawValue)
-        switch level {
-        case .debug:
-            logger.debug("\(fullMessage)")
-        case .info:
-            logger.info("\(fullMessage)")
-        case .error:
-            logger.error("\(fullMessage)")
-        case .fault:
-            logger.fault("\(fullMessage)")
-        case .log:
-            logger.log("\(fullMessage)")
-        case .trace:
-            logger.trace("\(fullMessage)")
-        case .notice:
-            logger.notice("\(fullMessage)")
-        case .warning:
-            logger.warning("\(fullMessage)")
-        case .critical:
-            logger.critical("\(fullMessage)")
-        }
-    } else {
-        debugPrint(fullMessage)
-    }
-#endif
-}
 
 public func showLoadingView(_ text: String? = nil, interaction: Bool = false) {
 #if canImport(ProgressHUD)
@@ -118,6 +47,16 @@ public class CommonUtils {
 
     static public func getModel() -> String {
         return UIDevice.current.model
+    }
+
+    static public func getDeviceModel() -> String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machineMirror = Mirror(reflecting: systemInfo.machine)
+        return machineMirror.children.reduce("") { identifier, element in
+            guard let value = element.value as? Int8, value != 0 else { return identifier }
+            return identifier + String(UnicodeScalar(UInt8(value)))
+        }
     }
 
     static public func getSystemVersion() -> String {
@@ -312,7 +251,7 @@ public class CommonUtils {
         // 기존 비디오 정보 가져오기
         let originalVideoInfo = self.extractVideoInfo(from: inputURL)
         let originalSize = videoTrack.naturalSize
-        let duration = originalVideoInfo.duration
+        let duration = originalVideoInfo.duration ?? CMTimeGetSeconds(asset.duration)
 
         // 원본 파일 크기 확인
         let originalFileSize = self.getFileSize(filePath: inputURL.path).int64Value
@@ -948,5 +887,63 @@ public extension CommonUtils {
                 }
             }
         }
+    }
+}
+
+public extension CommonUtils {
+    // MARK: - Memory Info
+    private static func getMemoryInfo() -> (freeMB: UInt64, totalMB: UInt64) {
+        let total = ProcessInfo.processInfo.physicalMemory / 1024 / 1024
+
+        var stats = vm_statistics64()
+        var count = mach_msg_type_number_t(MemoryLayout.size(ofValue: stats) / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &stats) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
+            }
+        }
+
+        var free: UInt64 = 0
+        if result == KERN_SUCCESS {
+            let pageSize = UInt64(vm_kernel_page_size)
+            free = (UInt64(stats.free_count) + UInt64(stats.inactive_count)) * pageSize / 1024 / 1024
+        }
+
+        return (freeMB: free, totalMB: total)
+    }
+
+    // MARK: - Disk Space Info
+    private static func getDiskSpaceInfo() -> (freeGB: String, totalGB: String) {
+        if let attributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+           let total = attributes[.systemSize] as? NSNumber,
+           let free = attributes[.systemFreeSize] as? NSNumber {
+
+            let byteToGB: (NSNumber) -> String = { bytes in
+                String(format: "%.2f", Double(truncating: bytes) / 1_073_741_824)
+            }
+            return (freeGB: byteToGB(free), totalGB: byteToGB(total))
+        }
+        return ("N/A", "N/A")
+    }
+
+    static func collectInfoForSupport() -> String {
+        let appVersion = self.getAppVersion()
+        let appBuild = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "N/A"
+        let systemVersion = self.getSystemVersion()
+        let deviceModel = self.getDeviceModel()
+        let memoryInfo = self.getMemoryInfo()
+        let diskSpace = self.getDiskSpaceInfo()
+        let language = Locale.preferredLanguages.first ?? "N/A"
+        let region = Locale.current.regionCode ?? "N/A"
+        return """
+        --- 시스템 정보 ---
+        • 앱 버전: \(appVersion) (\(appBuild))
+        • iOS 버전: \(systemVersion)
+        • 기기: \(deviceModel)
+        • 여유 메모리: \(memoryInfo.freeMB) MB / 총 \(memoryInfo.totalMB) MB
+        • 디스크 여유 공간: \(diskSpace.freeGB) GB / 총 \(diskSpace.totalGB) GB
+        • 언어 설정: \(language)
+        • 지역 설정: \(region)
+        """
     }
 }
