@@ -43,8 +43,10 @@ public extension Dictionary {
     }
 
     var toJsonString: String {
-        if let data = try? JSONSerialization.data(withJSONObject: self) {
-            return String(data: data, encoding: .utf8) ?? ""
+        if JSONSerialization.isValidJSONObject(self) {
+            if let data = try? JSONSerialization.data(withJSONObject: self) {
+                return String(data: data, encoding: .utf8) ?? ""
+            }
         }
         return ""
     }
