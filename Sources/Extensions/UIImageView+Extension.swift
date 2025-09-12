@@ -23,13 +23,13 @@ public class CustomKfActivityIndicator: Indicator {
 public extension UIImageView {
 #if canImport(Kingfisher)
     func stopDownloadTask() {
-        self.kf.cancelDownloadTask()
+        kf.cancelDownloadTask()
     }
 
     func setUrlImage(
         _ urlStr: String,
         placeholder: UIImage? = nil,
-        options: KingfisherOptionsInfo? = [ .transition(.fade(0.5))],
+        options: KingfisherOptionsInfo? = [ .transition(.none)],
         imageResize: CGSize? = nil,
         isIndicator: Bool = true,
         indicator: UIActivityIndicatorView = UIActivityIndicatorView(style: .medium)
@@ -48,7 +48,7 @@ public extension UIImageView {
     func setUrlImage(
         _ urlStr: String,
         placeholder: UIImage? = nil,
-        options: KingfisherOptionsInfo? = [ .transition(.fade(0.5))],
+        options: KingfisherOptionsInfo? = [ .transition(.none)],
         imageResize: CGSize? = nil,
         isIndicator: Bool = true,
         indicator: UIActivityIndicatorView = UIActivityIndicatorView(style: .medium),
@@ -76,34 +76,53 @@ public extension UIImageView {
     ) {
 
         // 이미지 초기화 및 다운로드 취소
-        self.stopDownloadTask()
-        if let placeholder = placeholder, self.image == nil {
-            self.image = placeholder
+        stopDownloadTask()
+        if let placeholder = placeholder, image == nil {
+            image = placeholder
         }
 
         guard let url = URL(string: urlStr) else {
-            self.image = nil
+            DebugLog("internalSetUrlImage urlStr is not valid url", level: .error, param: ["urlStr": urlStr])
+            image = nil
             completionHandler?(.failure(KingfisherError.requestError(reason: .emptyRequest)))
             return
         }
 
+        // 기존에 존재할 수 있는 커스텀 인디케이터 뷰를 제거하여 오토 레이아웃 충돌을 방지합니다.
+        kf.indicator?.view.removeFromSuperview()
         var kfOptions = options ?? []
 
+        // ✅ 리사이즈 적용 (없으면 imageView 크기 사용)
+        let targetSize: CGSize
         if let resize = imageResize, resize.width > 0, resize.height > 0 {
-            let processor = DownsamplingImageProcessor(size: resize)
+            targetSize = resize
+        } else {
+            targetSize = bounds.size // 뷰 크기 기준으로 다운샘플링
+        }
+
+        var resizedCacheKey = url.absoluteString
+        if targetSize.width > 0 && targetSize.height > 0 {
+            let processor = DownsamplingImageProcessor(size: targetSize)
             kfOptions.append(.processor(processor))
             kfOptions.append(.scaleFactor(UIScreen.main.scale))
-            kfOptions.append(.cacheOriginalImage)
+            // ✅ 해상도별 cacheKey 생성
+            let sizeKey = "w\(Int(targetSize.width))_h\(Int(targetSize.height))"
+            resizedCacheKey = "\(url.absoluteString)_\(sizeKey)"
         }
 
-        self.kf.indicatorType = isIndicator ? .custom(indicator: CustomKfActivityIndicator(indicator)) : .none
+        kf.indicatorType = isIndicator ? .custom(indicator: CustomKfActivityIndicator(indicator)) : .none
         if isIndicator {
-            self.kf.indicator?.startAnimatingView()
+            kf.indicator?.startAnimatingView()
         }
+
+        let resource = KF.ImageResource(
+            downloadURL: url,
+            cacheKey: resizedCacheKey
+        )
 
         // 🌄 이미지 로드 시작
-        self.kf.setImage(
-            with: url,
+        kf.setImage(
+            with: resource,
             placeholder: placeholder,
             options: kfOptions
         ) { [weak self] result in

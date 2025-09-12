@@ -5,10 +5,11 @@
 // Created by Dongju Lim on 10/11/24.
 //
 import Foundation
-import Alamofire
 import Combine
 import UIKit
 
+#if canImport(Alamofire)
+import Alamofire
 public typealias NetworkStatusCode = NetworkReachabilityManager.NetworkReachabilityStatus
 public protocol NetworkReachabilityManagerProtocol: AnyObject {
     func startReachabilityListening(onQueue queue: DispatchQueue, onUpdatePerforming listener: @escaping (NetworkStatusCode) -> Void)
@@ -73,3 +74,4 @@ public final class NetworkConnectivityManager {
         networkReachabilityManager?.stopListening()
     }
 }
+#endif
