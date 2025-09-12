@@ -17,12 +17,12 @@ public extension Data {
             let json = try JSONSerialization.jsonObject(with: self, options: [])
             let data = try JSONSerialization.data(withJSONObject: json, options: [.sortedKeys, .prettyPrinted])
             guard let jsonString = String(data: data, encoding: .utf8) else {
-                return ""
+                return String(data: self, encoding: .utf8) ?? ""
             }
             return jsonString
         } catch {
             DebugLog("Error: \(error.localizedDescription)")
-            return ""
+            return String(data: self, encoding: .utf8) ?? ""
         }
     }
 }

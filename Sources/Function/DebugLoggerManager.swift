@@ -38,7 +38,8 @@ public func DebugLog(_ message: Any? = "",
                      funcName: String = #function,
                      line: Int = #line,
                      param: [String: Any] = [:],
-                     isDebugPrint: Bool = false) {
+                     isDebugPrint: Bool = false,
+                     isFileLog: Bool = true) {
     if isDebugPrint {
         let fileName: String = (file as NSString).lastPathComponent
         var fullMessage = """
@@ -79,6 +80,7 @@ public func DebugLog(_ message: Any? = "",
         }
     }
 
+    guard isFileLog else { return }
     switch level {
     case .debug,
             .error,
@@ -110,6 +112,15 @@ public final class DebugLoggerManager {
         removeOldLogsIfNeeded(force: true)
     }
 
+    // 디스크 여유 공간 조회
+    private func availableDiskSpace() -> UInt64 {
+        if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+           let freeSize = attrs[.systemFreeSize] as? UInt64 {
+            return freeSize
+        }
+        return 0
+    }
+
     private func createDirectoryIfNeeded() {
         if !FileManager.default.fileExists(atPath: self.logDirectory.path) {
             try? FileManager.default.createDirectory(at: self.logDirectory, withIntermediateDirectories: true)
@@ -126,7 +137,7 @@ public final class DebugLoggerManager {
         let expirationDate = Calendar.current.date(byAdding: .day, value: -30, to: now)!
         guard let files = try? fileManager.contentsOfDirectory(at: self.logDirectory, includingPropertiesForKeys: [.creationDateKey]) else { return }
 
-        // 1. 삭제 대상: 30일 초과된 파일
+        // 1. 30일 이상된 파일 삭제
         for file in files {
             if let creationDate = try? file.resourceValues(forKeys: [.creationDateKey]).creationDate,
                creationDate < expirationDate {
@@ -134,7 +145,7 @@ public final class DebugLoggerManager {
             }
         }
 
-        // 2. 디렉토리 전체 용량 검사
+        // 2. 전체 용량 초과 시 오래된 것부터 제거
         var remainingFiles = getAllLogFiles().sorted { lhs, rhs in
             let lhsDate = (try? lhs.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
             let rhsDate = (try? rhs.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
@@ -180,13 +191,22 @@ public final class DebugLoggerManager {
     }
 
     public func log(_ message: Any?,
-             level: DebugLogLevel,
-             file: String,
-             funcName: String,
-             line: Int,
-             param: [String: Any]) {
+                    level: DebugLogLevel,
+                    file: String,
+                    funcName: String,
+                    line: Int,
+                    param: [String: Any]) {
 
-        logQueue.async {
+        logQueue.async { [weak self] in
+            guard let self = self else { return }
+            // ✅ (2) 디스크 여유 공간이 1GB 미만이면 로그 기록 자체 중지
+            let freeSpace = self.availableDiskSpace()
+            if freeSpace < 1_000_000_000 {
+                self.removeOldLogsIfNeeded(force: true)
+                return
+            }
+
+            // ✅ (1) 로그 쓰기 전에 오래된 로그 정리
             self.removeOldLogsIfNeeded()
 
             let date = Date()
@@ -204,14 +224,17 @@ public final class DebugLoggerManager {
             let logFileURL = self.getLogFileURL()
 
             if let data = logEntry.data(using: .utf8) {
-                if FileManager.default.fileExists(atPath: logFileURL.path) {
+                do {
                     if let fileHandle = try? FileHandle(forWritingTo: logFileURL) {
                         defer { fileHandle.closeFile() }
                         fileHandle.seekToEndOfFile()
                         fileHandle.write(data)
+                    } else {
+                        try data.write(to: logFileURL)
                     }
-                } else {
-                    try? data.write(to: logFileURL)
+                } catch {
+                    // ✅ (1) 디스크 가득 참 → 기존 로그 제거 후 기록 시도 or 그냥 skip
+                    try? FileManager.default.removeItem(at: logFileURL)
                 }
             }
         }
@@ -227,18 +250,22 @@ public final class DebugLoggerManager {
 
         try? fileManager.removeItem(at: zipFileURL)
 
-        let logFiles = getAllLogFiles()
+        let logFiles = getAllLogFiles().filter { $0.lastPathComponent != "logs.zip" }
         guard !logFiles.isEmpty else { return nil }
 
         do {
             let archive = try Archive(url: zipFileURL, accessMode: .create)
             // archive 사용
             for file in logFiles {
-                try? archive.addEntry(with: file.lastPathComponent, relativeTo: logDirectory)
+                do {
+                    try archive.addEntry(with: file.lastPathComponent, relativeTo: logDirectory)
+                } catch {
+                    DebugLog("Failed to add \(file.lastPathComponent) to archive: \(error)", level: .error, isFileLog: false)
+                }
             }
             return zipFileURL
         } catch {
-            DebugLog("Failed to create archive: \(error)", level: .error)
+            DebugLog("Failed to create archive: \(error)", level: .error, isFileLog: false)
             return nil
         }
     }

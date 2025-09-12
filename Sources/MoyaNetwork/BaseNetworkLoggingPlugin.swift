@@ -8,7 +8,6 @@
 import Foundation
 #if canImport(Moya)
 import Moya
-#endif
 /// 네트워크 호출 결과 로그 표시
 public typealias APILoggingConfiguration = NetworkLoggerPlugin.Configuration
 public class BaseNetworkLoggingPlugin: PluginType {
@@ -115,3 +114,4 @@ extension BaseNetworkLoggingPlugin {
         return [configuration.formatter.entry("Error", "Error calling \(target) : \(error)", target)]
     }
 }
+#endif

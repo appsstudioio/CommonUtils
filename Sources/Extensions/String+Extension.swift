@@ -397,6 +397,48 @@ public extension String {
         return url.deletingPathExtension().lastPathComponent
     }
 
+    /// 문자열에서 HTML <img> 태그의 src 속성을 찾아 배열로 반환합니다.
+    func extractImageURLs() -> [String] {
+        var imageUrls: [String] = []
+
+        // 정규식: <img ... src="URL" ... > 형태의 태그를 찾습니다.
+        let pattern = "<img\\s+[^>]*src\\s*=\\s*\"([^\"]*)\"[^>]*>"
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return imageUrls
+        }
+
+        // 문자열에서 정규식과 일치하는 모든 결과 찾기
+        let matches = regex.matches(in: self, options: [], range: NSRange(location: 0, length: self.utf16.count))
+
+        for match in matches {
+            // 첫 번째 캡처 그룹(capture group)은 src 속성 값입니다.
+            let nsRange = match.range(at: 1)
+            if let range = Range(nsRange, in: self) {
+                let url = String(self[range])
+                imageUrls.append(url)
+            }
+        }
+
+        return imageUrls
+    }
+
+    /// 문자열에서 HTML 태그를 제거합니다.
+    func stripHTML() -> String {
+        // 정규식: <... > 형태의 모든 태그를 찾습니다.
+        let pattern = "<[^>]+>"
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return self
+        }
+
+        let result = regex.stringByReplacingMatches(in: self, options: [], range: NSRange(location: 0, length: self.utf16.count), withTemplate: "")
+
+        // CDATA 섹션과 같은 특수 문자를 제거합니다.
+        return result
+            .replacingOccurrences(of: "<![CDATA[", with: "")
+            .replacingOccurrences(of: "]]>", with: "")
+    }
 }
 
 public extension Character {
