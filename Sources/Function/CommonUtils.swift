@@ -892,7 +892,7 @@ public extension CommonUtils {
 
 public extension CommonUtils {
     // MARK: - Memory Info
-    private static func getMemoryInfo() -> (freeMB: UInt64, totalMB: UInt64) {
+    static func getMemoryInfo() -> (freeMB: UInt64, totalMB: UInt64) {
         let total = ProcessInfo.processInfo.physicalMemory / 1024 / 1024
 
         var stats = vm_statistics64()
@@ -913,17 +913,30 @@ public extension CommonUtils {
     }
 
     // MARK: - Disk Space Info
-    private static func getDiskSpaceInfo() -> (freeGB: String, totalGB: String) {
-        if let attributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
-           let total = attributes[.systemSize] as? NSNumber,
-           let free = attributes[.systemFreeSize] as? NSNumber {
-
-            let byteToGB: (NSNumber) -> String = { bytes in
-                String(format: "%.2f", Double(truncating: bytes) / 1_073_741_824)
-            }
-            return (freeGB: byteToGB(free), totalGB: byteToGB(total))
+    static func deviceFreeDiskSpaceInBytes() -> Int64 {
+        if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+           let freeSize = attrs[.systemFreeSize] as? Int64 {
+            return freeSize
         }
-        return ("N/A", "N/A")
+        return 0
+    }
+
+    static func deviceTotalDiskSpaceInBytes() -> Int64 {
+        if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+           let freeSize = attrs[.systemSize] as? Int64 {
+            return freeSize
+        }
+        return 0
+    }
+
+    private static func getDiskSpaceInfo() -> (freeGB: String, totalGB: String) {
+        let totalSize = self.deviceTotalDiskSpaceInBytes()
+        let freeSize = self.deviceFreeDiskSpaceInBytes()
+
+        let byteToGB: (Int64) -> String = { bytes in
+            String(format: "%.2f", Double(truncating: bytes as NSNumber) / 1_073_741_824)
+        }
+        return (freeGB: byteToGB(freeSize), totalGB: byteToGB(totalSize))
     }
 
     static func collectInfoForSupport() -> String {

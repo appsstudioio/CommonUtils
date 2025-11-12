@@ -10,8 +10,10 @@ import UIKit
 public extension UIApplication {
     static var key: UIWindow? {
         if #available(iOS 13, *) {
-            guard self.shared.windows.count > 0 else { return nil }
-            return self.shared.windows.first { $0.isKeyWindow }
+            return UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .flatMap { $0.windows }
+                    .first(where: { $0.isKeyWindow })
         } else {
             return self.shared.keyWindow
         }
@@ -19,12 +21,14 @@ public extension UIApplication {
 
     var windowScene: UIWindowScene? {
         return self.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first
+            .first { $0.activationState == .foregroundActive }
+            .flatMap { $0 as? UIWindowScene }
     }
 
     static var sceneDelegate: UISceneDelegate? {
-        return self.shared.connectedScenes.first?.delegate as? UISceneDelegate
+        UIApplication.shared.connectedScenes
+            .first { $0.activationState == .foregroundActive }?
+            .delegate as? UISceneDelegate
     }
 
     var statusBar: CGRect {
@@ -32,7 +36,7 @@ public extension UIApplication {
     }
 
     var safeAreaInsets: UIEdgeInsets {
-        if let insets = UIApplication.shared.windows.first?.safeAreaInsets {
+        if let insets = UIApplication.key?.safeAreaInsets {
             return insets
         } else {
             return .zero
@@ -53,7 +57,8 @@ public extension UIApplication {
     }
     
     func canOpenUrl(_ url: String) -> Bool {
-        return UIApplication.shared.canOpenURL(URL(string: url)!)
+        guard let url = URL(string: url) else { return false }
+        return UIApplication.shared.canOpenURL(url)
     }
 
     func tryURL(urls: [String]) {
@@ -67,12 +72,12 @@ public extension UIApplication {
 
     func openURL(url: String, completion: ((Bool) -> Void)? = nil) {
         let application = UIApplication.shared
-        if self.canOpenUrl(url) {
-            application.open(URL(string: url)!, options: [:]) { isSuccess in
-                completion?(isSuccess)
-            }
-        } else {
+        guard let link = URL(string: url), application.canOpenURL(link) else {
             completion?(false)
+            return
+        }
+        application.open(link, options: [:]) { isSuccess in
+            completion?(isSuccess)
         }
     }
 }
