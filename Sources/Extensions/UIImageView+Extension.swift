@@ -23,6 +23,7 @@ public class CustomKfActivityIndicator: Indicator {
 public extension UIImageView {
 #if canImport(Kingfisher)
     func stopDownloadTask() {
+        self.image = nil
         kf.cancelDownloadTask()
     }
 

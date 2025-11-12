@@ -8,50 +8,61 @@
 import UIKit
 
 public extension UINavigationBar {
-    
-    func setNavigationBarStyle(_ backgroundColor: UIColor, fontColor foregroundColor: UIColor, font: UIFont, largeFont: UIFont) {
-        // iOS 15 이상: appearance API 사용
+
+    func setNavigationBarStyle(
+        _ backgroundColor: UIColor,
+        fontColor foregroundColor: UIColor,
+        font: UIFont,
+        largeFont: UIFont? = nil,
+        prefersLargeTitles: Bool = false
+    ) {
         if #available(iOS 15.0, *) {
             let appearance = UINavigationBarAppearance()
             appearance.configureWithOpaqueBackground()
             appearance.backgroundColor = backgroundColor
             appearance.shadowColor = .clear
+            appearance.shadowImage = UIImage() // 명시적으로 빈 이미지 설정
+
+            // 기본 타이틀
             appearance.titleTextAttributes = [
                 .foregroundColor: foregroundColor,
                 .font: font
             ]
 
-            appearance.largeTitleTextAttributes = [
-                .foregroundColor: foregroundColor,
-                .font: largeFont
-            ]
+            // Large title이 켜져 있을 때만 적용
+            if prefersLargeTitles, let largeFont = largeFont {
+                appearance.largeTitleTextAttributes = [
+                    .foregroundColor: foregroundColor,
+                    .font: largeFont
+                ]
+            }
 
-            // Appearance 적용
+            // Appearance 일괄 적용
             self.standardAppearance = appearance
             self.scrollEdgeAppearance = appearance
-            self.compactAppearance = appearance
-            self.compactScrollEdgeAppearance = appearance
-
+//            self.compactAppearance = appearance
+//            self.compactScrollEdgeAppearance = appearance
         } else {
-            // iOS 14: 기본 속성만 설정
+            // iOS 14 이하 fallback
             self.titleTextAttributes = [
                 .foregroundColor: foregroundColor,
                 .font: font
             ]
-            self.largeTitleTextAttributes = [
-                .foregroundColor: foregroundColor,
-                .font: largeFont
-            ]
+
+            if prefersLargeTitles, let largeFont = largeFont {
+                self.largeTitleTextAttributes = [
+                    .foregroundColor: foregroundColor,
+                    .font: largeFont
+                ]
+            }
             self.barTintColor = backgroundColor
             self.backgroundColor = backgroundColor
+            self.isTranslucent = false
+            self.shadowImage = UIImage()
+            self.setBackgroundImage(UIImage(), for: .default)
         }
-
-        // 공통 설정 (iOS 14 이상 모든 버전)
+        // 공통 설정
         self.tintColor = foregroundColor
-        self.isTranslucent = false
-        self.prefersLargeTitles = false
-        self.setBackgroundImage(nil, for: .default)
-        self.shadowImage = nil
+        self.prefersLargeTitles = prefersLargeTitles
     }
-
 }

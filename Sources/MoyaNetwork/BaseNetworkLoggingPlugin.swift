@@ -12,6 +12,7 @@ import Moya
 public typealias APILoggingConfiguration = NetworkLoggerPlugin.Configuration
 public class BaseNetworkLoggingPlugin: PluginType {
     public var configuration: APILoggingConfiguration
+    private let logQueue = DispatchQueue(label: "biz.uwiseone.base.networklog.queue", qos: .utility, attributes: .concurrent)
 
     /// Initializes a NetworkLoggerPlugin.
     public init(configuration: APILoggingConfiguration = APILoggingConfiguration()) {
@@ -19,17 +20,26 @@ public class BaseNetworkLoggingPlugin: PluginType {
     }
     
     public func willSend(_ request: RequestType, target: TargetType) {
-        logNetworkRequest(request, target: target) { [weak self] output in
-            self?.configuration.output(target, output)
+        // 요청 로그도 백그라운드로
+        logQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.logNetworkRequest(request, target: target) { output in
+                self.configuration.output(target, output)
+            }
         }
     }
 
     public func didReceive(_ result: Result<Moya.Response, MoyaError>, target: TargetType) {
-        switch result {
-        case .success(let response):
-            configuration.output(target, logNetworkResponse(response, target: target, isFromError: false))
-        case let .failure(error):
-            configuration.output(target, logNetworkError(error, target: target))
+        logQueue.async { [weak self] in
+            guard let self = self else { return }
+            switch result {
+            case .success(let response):
+                let output = self.logNetworkResponse(response, target: target, isFromError: false)
+                self.configuration.output(target, output)
+            case .failure(let error):
+                let output = self.logNetworkError(error, target: target)
+                self.configuration.output(target, output)
+            }
         }
     }
 }

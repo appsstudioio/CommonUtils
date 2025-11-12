@@ -292,10 +292,12 @@ public extension String {
     }
 
     var localization: String {
+        // Localizable extractor: dynamic key by design. Skip extraction.
         return NSLocalizedString(self, comment: "")
     }
     
     func localization(_ isBundle: Bool = true) -> String {
+        // Localizable extractor: dynamic key by design. Skip extraction.
         return (isBundle ? NSLocalizedString(self, bundle: Bundle.module, comment: "") : NSLocalizedString(self, comment: ""))
     }
 
@@ -448,3 +450,4 @@ public extension Character {
         return scalar.properties.isEmoji && (scalar.properties.isEmojiPresentation || scalar.value > 0x238C)
     }
 }
+
