@@ -57,6 +57,11 @@ final class UIColorHexExtensionTests: XCTestCase {
         XCTAssertNil(color)
     }
 
+    func testInitHex_invalidCharacters_shouldReturnNil() throws {
+        let color = UIColor(hex: "GGGGGG")
+        XCTAssertNil(color)
+    }
+
     func testInitHex_nilInput() throws {
         let color = UIColor(hex: nil)
         XCTAssertNil(color)

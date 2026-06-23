@@ -46,6 +46,18 @@ final class StringExtensionTests: XCTestCase {
         XCTAssertEqual(result, "")
     }
 
+    // MARK: - Global String Comparison Operator Overloads
+    func test_stringOperatorLessThan_shouldMatchDefaultLexicographicCompare() throws {
+        let lhs = "2"
+        let rhs = "10"
+        let defaultCompareResult = lhs.compare(rhs) == .orderedAscending
+        XCTAssertEqual(lhs < rhs, defaultCompareResult)
+    }
+
+    func test_stringOperatorEqual_shouldNotTreatDifferentLiteralsAsEqual() throws {
+        XCTAssertFalse("01" == "1")
+    }
+
     // MARK: - Tests for `toInt`
     func test_toInt_withPlainNumberString() throws {
         let input = "1234"
@@ -265,6 +277,13 @@ final class StringExtensionTests: XCTestCase {
         let input = ""
         let result = input.dateFormatChange(changeFormat: "yyyy.MM.dd")
         XCTAssertNotNil(result)
+    }
+
+    func test_dateFormatChange_withInvalidDateString_shouldNotFallbackToNow() throws {
+        let input = "invalid-date"
+        let result = input.dateFormatChange(changeFormat: "yyyy.MM.dd")
+        let nowFormatted = Date().toString(format: "yyyy.MM.dd")
+        XCTAssertNotEqual(result, nowFormatted)
     }
 
     func test_dateFormatChange_withCustomInputFormat() throws {
@@ -588,6 +607,12 @@ final class StringExtensionTests: XCTestCase {
         XCTAssertEqual("12345".applyPatternOnNumbers(pattern: "###-###", replacmentCharacter: "#"), "123-45")
         XCTAssertEqual("AB12345678".applyPatternOnNumbers(pattern: "###-####-####", replacmentCharacter: "#"), "123-4567-8")
         XCTAssertEqual("9876543210".applyPatternOnNumbers(pattern: "## ## ## ## ##", replacmentCharacter: "#"), "98 76 54 32 10")
+    }
+
+    // MARK: - toPhoneNumberFormat
+    func test_toPhoneNumberFormat_seoulNumber_shouldUse02AreaCodePattern() throws {
+        let input = "0212345678"
+        XCTAssertEqual(input.toPhoneNumberFormat(), "02-1234-5678")
     }
 
     // MARK: - utf16Count

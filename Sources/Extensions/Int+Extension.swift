@@ -12,10 +12,10 @@ public extension Int {
         let numberFormatter = NumberFormatter()
         numberFormatter.numberStyle = NumberFormatter.Style.decimal
         numberFormatter.locale = locale
-        if self < 1 {
+        if self == 0 {
             return "0"
         }
-        return (numberFormatter.string(from: NSNumber(value: self)) ?? "")
+        return (numberFormatter.string(from: NSNumber(value: self)) ?? "0")
     }
     
     func withCurrencySpellOut(_ locale: Locale = .current) -> String {

@@ -101,23 +101,25 @@ public extension String {
     
     // 문자열으로 버전 비교할때 "1.0.1" > "1.0.0"
     static func == (lhs: String, rhs: String) -> Bool {
-        return lhs.compare(rhs, options: .numeric) == .orderedSame
+        return lhs.compare(rhs) == .orderedSame
     }
 
     static func < (lhs: String, rhs: String) -> Bool {
-        return lhs.compare(rhs, options: .numeric) == .orderedAscending
+        return lhs.compare(rhs) == .orderedAscending
     }
 
     static func <= (lhs: String, rhs: String) -> Bool {
-        return lhs.compare(rhs, options: .numeric) == .orderedAscending || lhs.compare(rhs, options: .numeric) == .orderedSame
+        let result = lhs.compare(rhs)
+        return result == .orderedAscending || result == .orderedSame
     }
 
     static func > (lhs: String, rhs: String) -> Bool {
-        return lhs.compare(rhs, options: .numeric) == .orderedDescending
+        return lhs.compare(rhs) == .orderedDescending
     }
 
     static func >= (lhs: String, rhs: String) -> Bool {
-        return lhs.compare(rhs, options: .numeric) == .orderedDescending || lhs.compare(rhs, options: .numeric) == .orderedSame
+        let result = lhs.compare(rhs)
+        return result == .orderedDescending || result == .orderedSame
     }
     
     private var decimalFilteredString: String {
@@ -163,10 +165,11 @@ public extension String {
     func dateFormatChange(_ currentFormat: String = "yyyy-MM-dd HH:mm:ss", changeFormat: String) -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.setFormatter(format: currentFormat)
-        let date =  dateFormatter.date(from: self)
+        guard let date = dateFormatter.date(from: self) else {
+            return self
+        }
         dateFormatter.dateFormat = changeFormat
-        let dateStr = dateFormatter.string(from: date ?? Date())
-        return dateStr
+        return dateFormatter.string(from: date)
     }
 
     var isParsableHTML: Bool {
@@ -329,6 +332,26 @@ public extension String {
             }
         }
         return result
+    }
+
+    func toPhoneNumberFormat() -> String {
+        let replaceStr = self.replacingOccurrences(of: "-", with: "")
+
+        switch replaceStr.count {
+        case 0:
+            return "label_notEntered".localization
+        case 9:
+            return replaceStr.applyPatternOnNumbers(pattern: "##-###-####", replacmentCharacter: "#")
+        case 10:
+            if replaceStr.hasPrefix("02") {
+                return replaceStr.applyPatternOnNumbers(pattern: "##-####-####", replacmentCharacter: "#")
+            }
+            return replaceStr.applyPatternOnNumbers(pattern: "###-###-####", replacmentCharacter: "#")
+        case 11...15:
+            return replaceStr.applyPatternOnNumbers(pattern: "###-####-####", replacmentCharacter: "#")
+        default:
+            return replaceStr
+        }
     }
 
     // UTF-16 기반의 실제 커서 위치를 계산하는 방법
