@@ -11,34 +11,42 @@ import UIKit
 public extension NSAttributedString {
     func setStrikethroughStyle() -> NSMutableAttributedString {
         let attributedString = NSMutableAttributedString(attributedString: self)
-        attributedString.addAttribute(NSAttributedString.Key.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSMakeRange(0, self.string.count))
+        attributedString.addAttribute(NSAttributedString.Key.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: NSRange(location: 0, length: self.length))
         return attributedString
     }
-    
+
     func changeTextColor(color: UIColor, text: String) -> NSMutableAttributedString {
         let attributedString = NSMutableAttributedString(attributedString: self)
 
-        var range = NSRange(location: 0, length: self.length)
-        while (range.location != NSNotFound) {
-            range = (self.string as NSString).range(of: text, options: [], range: range)
-            if (range.location != NSNotFound) {
-                attributedString.addAttribute(.foregroundColor, value: color, range: NSRange(location: range.location, length: text.count))
-                range = NSRange(location: range.location + range.length, length: self.string.count - (range.location + range.length))
+        let nsText = self.string as NSString
+        var searchRange = NSRange(location: 0, length: nsText.length)
+        while (searchRange.location != NSNotFound) {
+            let foundRange = nsText.range(of: text, options: [], range: searchRange)
+            if (foundRange.location != NSNotFound) {
+                attributedString.addAttribute(.foregroundColor, value: color, range: foundRange)
+                let nextLocation = foundRange.location + foundRange.length
+                searchRange = NSRange(location: nextLocation, length: nsText.length - nextLocation)
+            } else {
+                searchRange.location = NSNotFound
             }
         }
 
         return attributedString
     }
-    
+
     func changeTextBackgroundColor(color: UIColor, text: String) -> NSMutableAttributedString {
         let attributedString = NSMutableAttributedString(attributedString: self)
 
-        var range = NSRange(location: 0, length: self.length)
-        while (range.location != NSNotFound) {
-            range = (self.string as NSString).range(of: text, options: [], range: range)
-            if (range.location != NSNotFound) {
-                attributedString.addAttribute(.backgroundColor, value: color, range: NSRange(location: range.location, length: text.count))
-                range = NSRange(location: range.location + range.length, length: self.string.count - (range.location + range.length))
+        let nsText = self.string as NSString
+        var searchRange = NSRange(location: 0, length: nsText.length)
+        while (searchRange.location != NSNotFound) {
+            let foundRange = nsText.range(of: text, options: [], range: searchRange)
+            if (foundRange.location != NSNotFound) {
+                attributedString.addAttribute(.backgroundColor, value: color, range: foundRange)
+                let nextLocation = foundRange.location + foundRange.length
+                searchRange = NSRange(location: nextLocation, length: nsText.length - nextLocation)
+            } else {
+                searchRange.location = NSNotFound
             }
         }
 
@@ -48,12 +56,16 @@ public extension NSAttributedString {
     func changeTextFont(font: UIFont, text: String) -> NSMutableAttributedString {
         let attributedString = NSMutableAttributedString(attributedString: self)
 
-        var range = NSRange(location: 0, length: self.length)
-        while (range.location != NSNotFound) {
-            range = (self.string as NSString).range(of: text, options: [], range: range)
-            if (range.location != NSNotFound) {
-                attributedString.addAttribute(.font, value: font, range: NSRange(location: range.location, length: text.count))
-                range = NSRange(location: range.location + range.length, length: self.string.count - (range.location + range.length))
+        let nsText = self.string as NSString
+        var searchRange = NSRange(location: 0, length: nsText.length)
+        while (searchRange.location != NSNotFound) {
+            let foundRange = nsText.range(of: text, options: [], range: searchRange)
+            if (foundRange.location != NSNotFound) {
+                attributedString.addAttribute(.font, value: font, range: foundRange)
+                let nextLocation = foundRange.location + foundRange.length
+                searchRange = NSRange(location: nextLocation, length: nsText.length - nextLocation)
+            } else {
+                searchRange.location = NSNotFound
             }
         }
 
@@ -63,67 +75,83 @@ public extension NSAttributedString {
     func changeParagraphStyle(style: NSMutableParagraphStyle, text: String) -> NSMutableAttributedString {
         let attributedString = NSMutableAttributedString(attributedString: self)
 
-        var range = NSRange(location: 0, length: self.length)
-        while (range.location != NSNotFound) {
-            range = (self.string as NSString).range(of: text, options: [], range: range)
-            if (range.location != NSNotFound) {
-                attributedString.addAttribute(.paragraphStyle, value: style, range: NSRange(location: range.location, length: text.count))
-                range = NSRange(location: range.location + range.length, length: self.string.count - (range.location + range.length))
+        let nsText = self.string as NSString
+        var searchRange = NSRange(location: 0, length: nsText.length)
+        while (searchRange.location != NSNotFound) {
+            let foundRange = nsText.range(of: text, options: [], range: searchRange)
+            if (foundRange.location != NSNotFound) {
+                attributedString.addAttribute(.paragraphStyle, value: style, range: foundRange)
+                let nextLocation = foundRange.location + foundRange.length
+                searchRange = NSRange(location: nextLocation, length: nsText.length - nextLocation)
+            } else {
+                searchRange.location = NSNotFound
             }
         }
 
         return attributedString
     }
-    
+
     func changeTextsColor(color: UIColor, texts: [String]) -> NSMutableAttributedString {
         let attributedString = NSMutableAttributedString(attributedString: self)
-        
+
+        let nsText = self.string as NSString
         texts.forEach {
-            var range = NSRange(location: 0, length: self.length)
-            while (range.location != NSNotFound) {
-                range = (self.string as NSString).range(of: $0, options: [], range: range)
-                if (range.location != NSNotFound) {
-                    attributedString.addAttribute(.foregroundColor, value: color, range: NSRange(location: range.location, length: $0.count))
-                    range = NSRange(location: range.location + range.length, length: self.string.count - (range.location + range.length))
+            var searchRange = NSRange(location: 0, length: nsText.length)
+            while (searchRange.location != NSNotFound) {
+                let foundRange = nsText.range(of: $0, options: [], range: searchRange)
+                if (foundRange.location != NSNotFound) {
+                    attributedString.addAttribute(.foregroundColor, value: color, range: foundRange)
+                    let nextLocation = foundRange.location + foundRange.length
+                    searchRange = NSRange(location: nextLocation, length: nsText.length - nextLocation)
+                } else {
+                    searchRange.location = NSNotFound
                 }
             }
         }
-        
+
         return attributedString
     }
-    
+
     func changeTextsFont(font: UIFont, texts: [String]) -> NSMutableAttributedString {
         let attributedString = NSMutableAttributedString(attributedString: self)
-        
+
+        let nsText = self.string as NSString
         texts.forEach {
-            var range = NSRange(location: 0, length: self.length)
-            while (range.location != NSNotFound) {
-                range = (self.string as NSString).range(of: $0, options: [], range: range)
-                if (range.location != NSNotFound) {
-                    attributedString.addAttribute(.font, value: font, range: NSRange(location: range.location, length: $0.count))
-                    range = NSRange(location: range.location + range.length, length: self.string.count - (range.location + range.length))
+            var searchRange = NSRange(location: 0, length: nsText.length)
+            while (searchRange.location != NSNotFound) {
+                let foundRange = nsText.range(of: $0, options: [], range: searchRange)
+                if (foundRange.location != NSNotFound) {
+                    attributedString.addAttribute(.font, value: font, range: foundRange)
+                    let nextLocation = foundRange.location + foundRange.length
+                    searchRange = NSRange(location: nextLocation, length: nsText.length - nextLocation)
+                } else {
+                    searchRange.location = NSNotFound
                 }
             }
         }
 
         return attributedString
     }
-    
+
     func changeTextUnderLine(text: String) -> NSMutableAttributedString {
         let attributedString = NSMutableAttributedString(attributedString: self)
-        
-        var range = NSRange(location: 0, length: self.length)
-        while (range.location != NSNotFound) {
-            range = (self.string as NSString).range(of: text, options: [], range: range)
-            if (range.location != NSNotFound) {
-                attributedString.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: NSRange(location: range.location, length: text.count))
-                range = NSRange(location: range.location + range.length, length: self.string.count - (range.location + range.length))
+
+        let nsText = self.string as NSString
+        var searchRange = NSRange(location: 0, length: nsText.length)
+        while (searchRange.location != NSNotFound) {
+            let foundRange = nsText.range(of: text, options: [], range: searchRange)
+            if (foundRange.location != NSNotFound) {
+                attributedString.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: foundRange)
+                let nextLocation = foundRange.location + foundRange.length
+                searchRange = NSRange(location: nextLocation, length: nsText.length - nextLocation)
+            } else {
+                searchRange.location = NSNotFound
             }
         }
 
         return attributedString
     }
-    
+
     func width(_ height: CGFloat) -> CGFloat {
         let constraintRect = CGSize(width: .greatestFiniteMagnitude, height: height)
         let boundingBox = self.boundingRect(with: constraintRect,
