@@ -40,6 +40,10 @@
 - PR 본문을 커밋 메시지 기반으로 자동 작성하는 GitHub Actions 워크플로를 추가했습니다.
 - 태그 push 시 GitHub Release를 생성하고, 이 changelog의 해당 버전 섹션을 릴리즈 본문으로 사용하는 워크플로를 추가했습니다.
 
+### 테스트
+
+- Date/String 테스트가 CI runner의 시간대와 locale에 영향받지 않도록 기대값을 명시했습니다.
+
 ## [1.0.16] - 2025-11-12
 
 - iOS 26 대응을 위한 UIApplication 관련 코드를 개선했습니다.

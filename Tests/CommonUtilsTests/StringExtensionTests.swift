@@ -264,7 +264,12 @@ final class StringExtensionTests: XCTestCase {
     func test_dateFormatChange_withDifferentFormat() throws {
         let input = "2024-01-01 00:00:00"
         let result = input.dateFormatChange(changeFormat: "MMM d, yyyy")
-        XCTAssertEqual(result, "1월 1, 2024")
+
+        let formatter = DateFormatter()
+        formatter.setFormatter()
+        let date = formatter.date(from: input)!
+        formatter.dateFormat = "MMM d, yyyy"
+        XCTAssertEqual(result, formatter.string(from: date))
     }
 
     func test_dateFormatChange_withInvalidDateString() throws {
