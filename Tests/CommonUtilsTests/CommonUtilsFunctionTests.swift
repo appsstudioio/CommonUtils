@@ -149,6 +149,13 @@ final class VideoCompressionTests: XCTestCase {
     var inputVideoURL: URL!
     var outputVideoURL: URL!
 
+    private func skipVideoCompressionIntegrationTestInDefaultCI() throws {
+        if ProcessInfo.processInfo.environment["CI"] == "true",
+           ProcessInfo.processInfo.environment["RUN_VIDEO_COMPRESSION_TESTS"] != "1" {
+            throw XCTSkip("CI 기본 테스트에서는 비디오 압축 통합 테스트를 별도 job으로 분리합니다.")
+        }
+    }
+
     // MARK: - Helper to load video URL from bundle or temp
     private func loadTestVideo(named name: String, withExtension ext: String = "mp4") -> URL? {
         return Bundle.module.url(forResource: name, withExtension: ext)
@@ -180,6 +187,8 @@ final class VideoCompressionTests: XCTestCase {
 
     // MARK: - 기본 압축 성공 케이스
     func testCompressVideo_Success() throws {
+        try skipVideoCompressionIntegrationTestInDefaultCI()
+
         let expectation = XCTestExpectation(description: "비디오 압축 성공")
 
         CommonUtils.compressVideo(inputURL: inputVideoURL,
@@ -202,6 +211,8 @@ final class VideoCompressionTests: XCTestCase {
 
     // MARK: - 너무 작은 maxFileSize로 인해 압축 실패
     func testCompressVideo_TooSmallMaxFileSize_ShouldFail() throws {
+        try skipVideoCompressionIntegrationTestInDefaultCI()
+
         let expectation = XCTestExpectation(description: "너무 작은 파일 크기로 압축 실패")
 
         CommonUtils.compressVideo(inputURL: inputVideoURL,
@@ -223,6 +234,8 @@ final class VideoCompressionTests: XCTestCase {
 
     // MARK: - 오디오 없는 비디오도 정상 압축 처리
     func testCompressVideo_NoAudioTrack_Success() throws {
+        try skipVideoCompressionIntegrationTestInDefaultCI()
+
         // 오디오 트랙이 없는 샘플 파일을 미리 프로젝트에 포함시켜야 함 (예: "no_audio.mp4")
         guard let videoPath = loadTestVideo(named: "video_no_audio") else {
             XCTFail("video_no_audio.mp4 파일이 필요합니다")
@@ -247,7 +260,7 @@ final class VideoCompressionTests: XCTestCase {
             expectation.fulfill()
         }
 
-        wait(for: [expectation], timeout: 30)
+        wait(for: [expectation], timeout: 90)
     }
 
     // MARK: - validateHTML Tests

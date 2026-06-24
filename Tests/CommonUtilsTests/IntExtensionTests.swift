@@ -19,6 +19,10 @@ final class IntExtensionTests: XCTestCase {
         XCTAssertEqual(999.withCommas(Locale(identifier: "de_DE")), "999")
     }
 
+    func test_withCommas_negativeInteger_shouldKeepSign() throws {
+        XCTAssertEqual((-1_234).withCommas(), "-1,234")
+    }
+
     // MARK: - withCurrencySpellOut
     func test_withCurrencySpellOut() throws {
         XCTAssertEqual(1.withCurrencySpellOut(Locale(identifier: "en_US")), "one")

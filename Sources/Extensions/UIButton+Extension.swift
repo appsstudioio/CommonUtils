@@ -20,14 +20,15 @@ public extension UIButton {
         guard let title = title(for: .normal), let titleColor = titleColor else { return }
         
         let titleString = NSMutableAttributedString(string: title)
+        let titleLength = (title as NSString).length
         titleString.addAttribute(
             .underlineStyle,
             value: NSUnderlineStyle.single.rawValue,
-            range: NSRange(location: 0, length: title.count)
+            range: NSRange(location: 0, length: titleLength)
         )
         
-        titleString.addAttribute(NSAttributedString.Key.foregroundColor, value: titleColor, range: NSRange(location: 0, length: title.count))
-        titleString.addAttribute(NSAttributedString.Key.font, value: font, range: NSRange(location: 0, length: title.count))
+        titleString.addAttribute(NSAttributedString.Key.foregroundColor, value: titleColor, range: NSRange(location: 0, length: titleLength))
+        titleString.addAttribute(NSAttributedString.Key.font, value: font, range: NSRange(location: 0, length: titleLength))
         setAttributedTitle(titleString, for: .normal)
     }
     

@@ -68,7 +68,8 @@ public enum GestureType {
 public class GestureSubscription<S: Subscriber>: Subscription where S.Input == GestureType, S.Failure == Never {
     private var subscriber: S?
     private var gestureType: GestureType
-    private var view: UIView
+    private weak var view: UIView?
+    private var gesture: UIGestureRecognizer?
     init(subscriber: S, view: UIView, gestureType: GestureType) {
         self.subscriber = subscriber
         self.view = view
@@ -77,11 +78,17 @@ public class GestureSubscription<S: Subscriber>: Subscription where S.Input == G
     }
     private func configureGesture(_ gestureType: GestureType) {
         let gesture = gestureType.get()
+        self.gesture = gesture
         gesture.addTarget(self, action: #selector(handler))
-        view.addGestureRecognizer(gesture)
+        view?.addGestureRecognizer(gesture)
     }
     public func request(_ demand: Subscribers.Demand) { }
     public func cancel() {
+        if let gesture, let view {
+            gesture.removeTarget(self, action: #selector(handler))
+            view.removeGestureRecognizer(gesture)
+        }
+        gesture = nil
         subscriber = nil
     }
     @objc

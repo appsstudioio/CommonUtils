@@ -1,0 +1,76 @@
+name: PR Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: iOS Simulator Tests
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select iPhone simulator
+        run: |
+          SIMULATOR_ID="$(
+            xcrun simctl list devices available -j | ruby -rjson -e '
+              devices = JSON.parse(STDIN.read)["devices"].values.flatten
+              simulator = devices.find { |device| device["name"].include?("iPhone") && device["isAvailable"] }
+              abort("No available iPhone simulator") unless simulator
+              puts simulator["udid"]
+            '
+          )"
+          echo "SIMULATOR_ID=${SIMULATOR_ID}" >> "${GITHUB_ENV}"
+          echo "Selected simulator: ${SIMULATOR_ID}"
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -scheme CommonUtils \
+            -destination "platform=iOS Simulator,id=${SIMULATOR_ID}" \
+            -skip-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_Success \
+            -skip-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_TooSmallMaxFileSize_ShouldFail \
+            -skip-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_NoAudioTrack_Success \
+            CODE_SIGNING_ALLOWED=NO
+
+  video-compression-test:
+    name: Video Compression Integration Test
+    runs-on: macos-15
+    timeout-minutes: 20
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'run-video-compression-tests')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select iPhone simulator
+        run: |
+          SIMULATOR_ID="$(
+            xcrun simctl list devices available -j | ruby -rjson -e '
+              devices = JSON.parse(STDIN.read)["devices"].values.flatten
+              simulator = devices.find { |device| device["name"].include?("iPhone") && device["isAvailable"] }
+              abort("No available iPhone simulator") unless simulator
+              puts simulator["udid"]
+            '
+          )"
+          echo "SIMULATOR_ID=${SIMULATOR_ID}" >> "${GITHUB_ENV}"
+          echo "Selected simulator: ${SIMULATOR_ID}"
+
+      - name: Run video compression integration tests
+        env:
+          RUN_VIDEO_COMPRESSION_TESTS: "1"
+        run: |
+          xcodebuild test \
+            -scheme CommonUtils \
+            -destination "platform=iOS Simulator,id=${SIMULATOR_ID}" \
+            -only-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_Success \
+            -only-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_TooSmallMaxFileSize_ShouldFail \
+            -only-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_NoAudioTrack_Success \
+            CODE_SIGNING_ALLOWED=NO
