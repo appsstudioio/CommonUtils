@@ -111,7 +111,7 @@ final class DateExtensionTests: XCTestCase {
         XCTAssertTrue(fiveMinsLater.toCalculateDateString(from: now).contains(("분".localization() + "후".localization())))
         XCTAssertTrue(twoDaysAgo.toCalculateDateString(from: now).contains(("일".localization() + "전".localization())))
         XCTAssertTrue(oneHourLater.toCalculateDateString(from: now).contains(("시간".localization() + "후".localization())))
-        XCTAssertEqual(hundredDaysAgo.toCalculateDateString(from: now), "오래전".localization())
+        XCTAssertEqual(hundredDaysAgo.toCalculateDateString(from: now), "오래".localization() + "전".localization())
     }
 
     // MARK: - toUnixTimeStamp

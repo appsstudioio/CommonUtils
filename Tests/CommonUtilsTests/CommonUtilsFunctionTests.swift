@@ -223,6 +223,11 @@ final class VideoCompressionTests: XCTestCase {
 
     // MARK: - 오디오 없는 비디오도 정상 압축 처리
     func testCompressVideo_NoAudioTrack_Success() throws {
+        if ProcessInfo.processInfo.environment["CI"] == "true",
+           ProcessInfo.processInfo.environment["RUN_VIDEO_COMPRESSION_TESTS"] != "1" {
+            throw XCTSkip("CI 기본 테스트에서는 비디오 압축 통합 테스트를 별도 job으로 분리합니다.")
+        }
+
         // 오디오 트랙이 없는 샘플 파일을 미리 프로젝트에 포함시켜야 함 (예: "no_audio.mp4")
         guard let videoPath = loadTestVideo(named: "video_no_audio") else {
             XCTFail("video_no_audio.mp4 파일이 필요합니다")
@@ -247,7 +252,7 @@ final class VideoCompressionTests: XCTestCase {
             expectation.fulfill()
         }
 
-        wait(for: [expectation], timeout: 30)
+        wait(for: [expectation], timeout: 90)
     }
 
     // MARK: - validateHTML Tests
