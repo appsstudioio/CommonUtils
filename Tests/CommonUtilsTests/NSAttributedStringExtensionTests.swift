@@ -135,6 +135,77 @@ final class NSAttributedStringExtensionsTests: XCTestCase {
         XCTAssertEqual(result.string, "Other words")
     }
 
+    // MARK: - UTF-16 (Emoji + ZWJ) style tests
+    func test_setStrikethroughStyle_withEmojiAndZWJ_shouldCoverEntireUTF16Range() throws {
+        let text = "😀A👨‍👩‍👧‍👦Z"
+        let base = NSAttributedString(string: text)
+        let result = base.setStrikethroughStyle()
+
+        let firstStyle = result.attribute(.strikethroughStyle, at: 0, effectiveRange: nil) as? Int
+        let lastStyle = result.attribute(.strikethroughStyle, at: result.length - 1, effectiveRange: nil) as? Int
+
+        XCTAssertEqual(firstStyle, NSUnderlineStyle.single.rawValue)
+        XCTAssertEqual(lastStyle, NSUnderlineStyle.single.rawValue)
+    }
+
+    func test_changeStyleMethods_withEmojiAndZWJ_shouldApplyToAllEmojiOccurrences() throws {
+        let text = "😀A👨‍👩‍👧‍👦😀"
+        let base = NSAttributedString(string: text)
+        let target = "😀"
+        let targetRanges = ranges(of: target, in: text)
+        XCTAssertEqual(targetRanges.count, 2)
+
+        let colorChanged = base.changeTextColor(color: .red, text: target)
+        assertColorAttribute(colorChanged, key: .foregroundColor, expected: .red, ranges: targetRanges)
+
+        let backgroundChanged = base.changeTextBackgroundColor(color: .yellow, text: target)
+        assertColorAttribute(backgroundChanged, key: .backgroundColor, expected: .yellow, ranges: targetRanges)
+
+        let font = UIFont.boldSystemFont(ofSize: 16)
+        let fontChanged = base.changeTextFont(font: font, text: target)
+        targetRanges.forEach {
+            let appliedFont = fontChanged.attribute(.font, at: $0.location, effectiveRange: nil) as? UIFont
+            XCTAssertEqual(appliedFont, font)
+        }
+
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        let paragraphChanged = base.changeParagraphStyle(style: style, text: target)
+        targetRanges.forEach {
+            let appliedStyle = paragraphChanged.attribute(.paragraphStyle, at: $0.location, effectiveRange: nil) as? NSParagraphStyle
+            XCTAssertEqual(appliedStyle?.alignment, style.alignment)
+        }
+    }
+
+    func test_changeStyleMethods_withEmojiAndZWJ_shouldApplyToAllHangulOccurrences() throws {
+        let text = "끝😀👨‍👩‍👧‍👦끝"
+        let base = NSAttributedString(string: text)
+        let target = "끝"
+        let targetRanges = ranges(of: target, in: text)
+        XCTAssertEqual(targetRanges.count, 2)
+
+        let colorChanged = base.changeTextColor(color: .blue, text: target)
+        assertColorAttribute(colorChanged, key: .foregroundColor, expected: .blue, ranges: targetRanges)
+
+        let backgroundChanged = base.changeTextBackgroundColor(color: .green, text: target)
+        assertColorAttribute(backgroundChanged, key: .backgroundColor, expected: .green, ranges: targetRanges)
+
+        let font = UIFont.systemFont(ofSize: 15, weight: .medium)
+        let fontChanged = base.changeTextFont(font: font, text: target)
+        targetRanges.forEach {
+            let appliedFont = fontChanged.attribute(.font, at: $0.location, effectiveRange: nil) as? UIFont
+            XCTAssertEqual(appliedFont, font)
+        }
+
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = 6
+        let paragraphChanged = base.changeParagraphStyle(style: style, text: target)
+        targetRanges.forEach {
+            let appliedStyle = paragraphChanged.attribute(.paragraphStyle, at: $0.location, effectiveRange: nil) as? NSParagraphStyle
+            XCTAssertEqual(appliedStyle?.lineSpacing, style.lineSpacing)
+        }
+    }
+
     // MARK: - width(height:)
     func test_width_calculatesCorrectWidth() throws {
         let attr = NSAttributedString(string: "Hello", attributes: [.font: UIFont.systemFont(ofSize: 16)])
@@ -764,5 +835,40 @@ final class NSAttributedStringExtensionsTests: XCTestCase {
         let extracted = attrString.extractAndRemoveImageAttachments
         XCTAssertEqual(extracted.count, 1)
         XCTAssertTrue(attrString.string.isEmpty)
+    }
+
+    private func ranges(of target: String, in text: String) -> [NSRange] {
+        guard !target.isEmpty else { return [] }
+
+        let nsText = text as NSString
+        var ranges: [NSRange] = []
+        var searchRange = NSRange(location: 0, length: nsText.length)
+
+        while true {
+            let foundRange = nsText.range(of: target, options: [], range: searchRange)
+            guard foundRange.location != NSNotFound else { break }
+
+            ranges.append(foundRange)
+
+            let nextLocation = foundRange.location + foundRange.length
+            if nextLocation >= nsText.length { break }
+            searchRange = NSRange(location: nextLocation, length: nsText.length - nextLocation)
+        }
+
+        return ranges
+    }
+
+    private func assertColorAttribute(
+        _ attributed: NSAttributedString,
+        key: NSAttributedString.Key,
+        expected: UIColor,
+        ranges: [NSRange],
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        ranges.forEach {
+            let appliedColor = attributed.attribute(key, at: $0.location, effectiveRange: nil) as? UIColor
+            XCTAssertEqual(appliedColor, expected, file: file, line: line)
+        }
     }
 }

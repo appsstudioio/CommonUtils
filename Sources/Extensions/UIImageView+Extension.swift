@@ -32,6 +32,7 @@ public extension UIImageView {
         placeholder: UIImage? = nil,
         options: KingfisherOptionsInfo? = [ .transition(.none)],
         imageResize: CGSize? = nil,
+        skipDownsampling: Bool = false,
         isIndicator: Bool = true,
         indicator: UIActivityIndicatorView = UIActivityIndicatorView(style: .medium)
     ) {
@@ -40,6 +41,7 @@ public extension UIImageView {
             placeholder: placeholder,
             options: options,
             imageResize: imageResize,
+            skipDownsampling: skipDownsampling,
             isIndicator: isIndicator,
             indicator: indicator,
             completionHandler: nil
@@ -51,6 +53,7 @@ public extension UIImageView {
         placeholder: UIImage? = nil,
         options: KingfisherOptionsInfo? = [ .transition(.none)],
         imageResize: CGSize? = nil,
+        skipDownsampling: Bool = false,
         isIndicator: Bool = true,
         indicator: UIActivityIndicatorView = UIActivityIndicatorView(style: .medium),
         completionHandler: @escaping ((Result<RetrieveImageResult, KingfisherError>) -> Void)
@@ -60,6 +63,7 @@ public extension UIImageView {
             placeholder: placeholder,
             options: options,
             imageResize: imageResize,
+            skipDownsampling: skipDownsampling,
             isIndicator: isIndicator,
             indicator: indicator,
             completionHandler: completionHandler
@@ -71,6 +75,7 @@ public extension UIImageView {
         placeholder: UIImage?,
         options: KingfisherOptionsInfo?,
         imageResize: CGSize?,
+        skipDownsampling: Bool,
         isIndicator: Bool,
         indicator: UIActivityIndicatorView,
         completionHandler: ((Result<RetrieveImageResult, KingfisherError>) -> Void)?
@@ -93,22 +98,24 @@ public extension UIImageView {
         kf.indicator?.view.removeFromSuperview()
         var kfOptions = options ?? []
 
-        // ✅ 리사이즈 적용 (없으면 imageView 크기 사용)
-        let targetSize: CGSize
-        if let resize = imageResize, resize.width > 0, resize.height > 0 {
-            targetSize = resize
-        } else {
-            targetSize = bounds.size // 뷰 크기 기준으로 다운샘플링
-        }
-
         var resizedCacheKey = url.absoluteString
-        if targetSize.width > 0 && targetSize.height > 0 {
-            let processor = DownsamplingImageProcessor(size: targetSize)
-            kfOptions.append(.processor(processor))
-            kfOptions.append(.scaleFactor(UIScreen.main.scale))
-            // ✅ 해상도별 cacheKey 생성
-            let sizeKey = "w\(Int(targetSize.width))_h\(Int(targetSize.height))"
-            resizedCacheKey = "\(url.absoluteString)_\(sizeKey)"
+        if !skipDownsampling {
+            // ✅ 리사이즈 적용 (없으면 imageView 크기 사용)
+            let targetSize: CGSize
+            if let resize = imageResize, resize.width > 0, resize.height > 0 {
+                targetSize = resize
+            } else {
+                targetSize = bounds.size // 뷰 크기 기준으로 다운샘플링
+            }
+
+            if targetSize.width > 0 && targetSize.height > 0 {
+                let processor = DownsamplingImageProcessor(size: targetSize)
+                kfOptions.append(.processor(processor))
+                kfOptions.append(.scaleFactor(UIScreen.main.scale))
+                // ✅ 해상도별 cacheKey 생성
+                let sizeKey = "w\(Int(targetSize.width))_h\(Int(targetSize.height))"
+                resizedCacheKey = "\(url.absoluteString)_\(sizeKey)"
+            }
         }
 
         kf.indicatorType = isIndicator ? .custom(indicator: CustomKfActivityIndicator(indicator)) : .none

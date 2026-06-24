@@ -43,9 +43,9 @@ public func DebugLog(_ message: Any? = "",
     if isDebugPrint {
         let fileName: String = (file as NSString).lastPathComponent
         var fullMessage = """
-    [파일: \(fileName), 라인: \(line), 함수: \(funcName)]
-    \(String(describing: message))
-    """
+        [파일: \(fileName), 라인: \(line), 함수: \(funcName)]
+        \(String(describing: message))
+        """
 
         if !param.isEmpty {
             fullMessage += "\n[추가 정보: \(param.toJsonString)]"
