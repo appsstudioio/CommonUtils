@@ -35,6 +35,8 @@ jobs:
           xcodebuild test \
             -scheme CommonUtils \
             -destination "platform=iOS Simulator,id=${SIMULATOR_ID}" \
+            -skip-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_Success \
+            -skip-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_TooSmallMaxFileSize_ShouldFail \
             -skip-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_NoAudioTrack_Success \
             CODE_SIGNING_ALLOWED=NO
 
@@ -61,12 +63,14 @@ jobs:
           echo "SIMULATOR_ID=${SIMULATOR_ID}" >> "${GITHUB_ENV}"
           echo "Selected simulator: ${SIMULATOR_ID}"
 
-      - name: Run no-audio compression test
+      - name: Run video compression integration tests
         env:
           RUN_VIDEO_COMPRESSION_TESTS: "1"
         run: |
           xcodebuild test \
             -scheme CommonUtils \
             -destination "platform=iOS Simulator,id=${SIMULATOR_ID}" \
+            -only-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_Success \
+            -only-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_TooSmallMaxFileSize_ShouldFail \
             -only-testing:CommonUtilsTests/VideoCompressionTests/testCompressVideo_NoAudioTrack_Success \
             CODE_SIGNING_ALLOWED=NO
