@@ -32,26 +32,27 @@ public extension UIButton {
         setAttributedTitle(titleString, for: .normal)
     }
     
-    // https://developer-eungb.tistory.com/30
+    // 기존 버튼 설정을 유지하면서 이미지 아래에 제목을 배치한다.
     func alignTextBelow(spacing: CGFloat = 4.0) {
-        guard let image = self.imageView?.image else {
+        guard imageView?.image != nil, let titleLabel = titleLabel, titleLabel.text != nil else {
             return
         }
 
-        guard let titleLabel = self.titleLabel else {
-            return
+        var configuration = self.configuration ?? .plain()
+        if self.configuration == nil {
+            configuration.contentInsets = .zero
+            if currentAttributedTitle == nil {
+                let font = titleLabel.font
+                configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+                    var attributes = attributes
+                    attributes.font = font
+                    return attributes
+                }
+            }
         }
-
-        guard let titleText = titleLabel.text else {
-            return
-        }
-
-        let titleSize = titleText.size(withAttributes: [
-            NSAttributedString.Key.font: titleLabel.font as Any
-        ])
-
-        titleEdgeInsets = UIEdgeInsets(top: spacing, left: -image.size.width, bottom: -image.size.height, right: 0)
-        imageEdgeInsets = UIEdgeInsets(top: -(titleSize.height + spacing), left: 0, bottom: 0, right: -titleSize.width)
+        configuration.imagePlacement = .top
+        configuration.imagePadding = spacing
+        self.configuration = configuration
     }
 }
 
