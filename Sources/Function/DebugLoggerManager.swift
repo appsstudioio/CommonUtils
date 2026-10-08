@@ -39,7 +39,12 @@ public func DebugLog(_ message: Any? = "",
                      line: Int = #line,
                      param: [String: Any] = [:],
                      isDebugPrint: Bool = false,
-                     isFileLog: Bool = true) {
+                     isFileLog: Bool = true,
+                     externalEventName: String? = nil) {
+    if let event = externalEventName {
+        DebugLoggerManager.externalLogHandler?(event, String(describing: message ?? ""), level,
+                                              param, file, funcName, line)
+    }
     if isDebugPrint {
         let fileName: String = (file as NSString).lastPathComponent
         var fullMessage = """
@@ -97,6 +102,11 @@ public func DebugLog(_ message: Any? = "",
 public final class DebugLoggerManager {
 
     public static let shared = DebugLoggerManager()
+
+    public typealias ExternalLogHandler = (String, String, DebugLogLevel, [String: Any], String, String, Int) -> Void
+
+    /// 외부 기록이 지정된 로그를 앱에서 등록한 공통 처리기로 전달한다.
+    public static var externalLogHandler: ExternalLogHandler?
 
     private let logDirectory: URL
     private let logQueue = DispatchQueue(label: "\(CommonUtils.getBundleIdentifier).debuglogger", qos: .utility)
