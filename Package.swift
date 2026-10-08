@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.4
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "CommonUtils",
     defaultLocalization: "ko",
-    platforms: [.iOS(.v13), .macOS(.v10_15), .tvOS(.v13), .watchOS(.v6)],
+    platforms: [.iOS(.v15), .macOS(.v12), .tvOS(.v15), .watchOS(.v9)],
     products: [
         .library(
             name: "CommonUtils",
@@ -15,12 +15,11 @@ let package = Package(
     dependencies: [
         // 패키지 추가
         .package(url: "https://github.com/Moya/Moya.git", .upToNextMajor(from: "15.0.3")),
-        .package(url: "https://github.com/SnapKit/SnapKit.git", .upToNextMajor(from: "5.7.1")),
+        .package(url: "https://github.com/SnapKit/SnapKit.git", .upToNextMajor(from: "6.0.0")),
         .package(url: "https://github.com/devxoul/Then", .upToNextMajor(from: "3.0.0")),
-        .package(url: "https://github.com/relatedcode/ProgressHUD.git", .upToNextMajor(from: "14.1.4")),
-        .package(url: "https://github.com/onevcat/Kingfisher", .upToNextMajor(from: "8.10.0")),
+        .package(url: "https://github.com/uwiseone-ios/ProgressHUD", branch: "master"),
+        .package(url: "https://github.com/onevcat/Kingfisher", .upToNextMajor(from: "8.13.0")),
         .package(url: "https://github.com/weichsel/ZIPFoundation", .upToNextMajor(from: "0.9.20"))
-
     ],
     targets: [
         .target(
@@ -41,5 +40,5 @@ let package = Package(
                 .process("TestSampleData")
             ])
     ],
-    swiftLanguageVersions: [.v5]
+    swiftLanguageModes: [.v5]
 )
