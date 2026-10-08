@@ -211,8 +211,9 @@ public class CommonUtils {
             }
         }
 
-        if let audioTrack = asset.tracks(withMediaType: .audio).first {
-            let formatDescription = audioTrack.formatDescriptions.first as! CMAudioFormatDescription
+        if let audioTrack = asset.tracks(withMediaType: .audio).first,
+           let rawDescription = audioTrack.formatDescriptions.first {
+            let formatDescription = rawDescription as! CMAudioFormatDescription
             if let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription)?.pointee {
                 audioCodec = audioTrack.mediaType.rawValue
                 audioSampleRate = asbd.mSampleRate
@@ -244,7 +245,7 @@ public class CommonUtils {
 
         // 비디오 트랙 가져오기
         guard let videoTrack = asset.tracks(withMediaType: .video).first else {
-            completion(.failure(CommonUtilCompressionError.exportSessionFailure("비디오 트랙을 찾을 수 없음")))
+            completion(.failure(CommonUtilCompressionError.videoTrackNotFound))
             return
         }
 
@@ -269,8 +270,6 @@ public class CommonUtils {
 
         // 오디오 비트레이트 (비디오는 전체 비트레이트의 약 90%로 가정)
         let videoBitRate = targetBitRate * 0.9
-        let audioSampleRate = originalVideoInfo.audioSampleRate ?? 44100
-        let audioChannels = originalVideoInfo.audioChannels ?? 2
         let audioBitRate: Float = 128_000 // 128 kbps (표준 오디오 품질)
         let estimatedFileSize = Int64((videoBitRate + audioBitRate) * Float(duration) / 8) // 예상 파일 사이즈
         DebugLog("원본 비디오 정보: \(originalVideoInfo)")
@@ -279,6 +278,47 @@ public class CommonUtils {
         DebugLog("비디오 비트레이트: \(videoBitRate / 1_000_000) Mbps")
         DebugLog("원본 파일 사이즈: \(originalFileSize.toFileByteSting)")
         DebugLog("예상 파일 사이즈: \(estimatedFileSize.toFileByteSting)")
+
+        let sourceAudioTrack = asset.tracks(withMediaType: .audio).first
+        var audioConfiguration: VideoCompressionAudioSettings?
+        var audioDetails: [String: Any] = [
+            "has_audio": sourceAudioTrack == nil ? 0 : 1,
+            "input_channels": originalVideoInfo.audioChannels ?? 0,
+            "sample_rate": originalVideoInfo.audioSampleRate.map { $0.isFinite ? $0 : 0 } ?? 0,
+            "input_format_id": 0,
+            "input_bytes": originalFileSize,
+            "duration_seconds": duration.isFinite ? duration : 0,
+            "quality": String(describing: quality),
+            "layout_source": "none",
+            "layout_bytes": 0,
+            "layout_tag": 0,
+            "status": sourceAudioTrack == nil ? "no_audio" : "ready"
+        ]
+        do {
+            if let sourceAudioTrack = sourceAudioTrack {
+                let formatDescription = sourceAudioTrack.formatDescriptions.first.map { $0 as! CMAudioFormatDescription }
+                if let formatDescription = formatDescription {
+                    audioDetails["input_format_id"] = Int(CMFormatDescriptionGetMediaSubType(formatDescription))
+                }
+                let configuration = try VideoCompressionAudioSettings.prepare(formatDescription: formatDescription)
+                audioConfiguration = configuration
+                audioDetails["layout_source"] = configuration.layoutSource
+                audioDetails["output_channels"] = configuration.outputSettings[AVNumberOfChannelsKey]
+                audioDetails["output_sample_rate"] = configuration.outputSettings[AVSampleRateKey]
+                audioDetails["uses_default_format"] = configuration.usesDefaultFormat ? 1 : 0
+                if let layout = configuration.outputSettings[AVChannelLayoutKey] as? Data {
+                    audioDetails["layout_bytes"] = layout.count
+                    audioDetails["layout_tag"] = Int(layout.withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) })
+                }
+            }
+        } catch {
+            audioDetails["status"] = "invalid_audio_settings"
+            VideoCompressionAudioSettings.reportInput(audioDetails)
+            completion(.failure(error))
+            return
+        }
+        // 정상 입력도 기록하여 다채널 입력의 발생 비율을 집계한다.
+        VideoCompressionAudioSettings.reportInput(audioDetails)
 
         // 최대 파일 크기 제한이 있는 경우, 예상 파일 크기 미리 계산
         if let maxFileSize = maxFileSize {
@@ -363,20 +403,28 @@ public class CommonUtils {
 
             // 오디오 설정 및 입력 추가 (오디오 트랙이 있는 경우)
             var audioWriterInput: AVAssetWriterInput?
-            if audioTrackExists {
-                let audioSettings: [String: Any] = [
-                    AVFormatIDKey: kAudioFormatMPEG4AAC,
-                    AVNumberOfChannelsKey: audioChannels,
-                    AVSampleRateKey: audioSampleRate,
-                    AVEncoderBitRateKey: audioBitRate
-                ]
-
+            if let audioConfiguration = audioConfiguration {
+                let audioSettings = audioConfiguration.outputSettings
+                let channels = audioSettings[AVNumberOfChannelsKey] as? Int ?? 0
+                guard channels <= 2 || VideoCompressionAudioSettings.supportsAACChannelCount(channels),
+                      assetWriter.canApply(outputSettings: audioSettings, forMediaType: .audio) else {
+                    audioDetails["status"] = "unsupported_audio_settings"
+                    DebugLog("오디오 설정을 사용할 수 없음", level: .error, param: audioDetails, isFileLog: false,
+                             externalEventName: "video_compression_audio_rejected")
+                    completion(.failure(CommonUtilCompressionError.unsupportedAudioFormat("AAC 출력으로 사용할 수 없는 오디오 설정")))
+                    return
+                }
                 audioWriterInput = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
                 audioWriterInput?.expectsMediaDataInRealTime = false
 
-                if let audioInput = audioWriterInput, assetWriter.canAdd(audioInput) {
-                    assetWriter.add(audioInput)
+                guard let audioInput = audioWriterInput, assetWriter.canAdd(audioInput) else {
+                    audioDetails["status"] = "audio_input_rejected"
+                    DebugLog("오디오 설정을 사용할 수 없음", level: .error, param: audioDetails, isFileLog: false,
+                             externalEventName: "video_compression_audio_rejected")
+                    completion(.failure(CommonUtilCompressionError.unsupportedAudioFormat("오디오 입력을 추가할 수 없음")))
+                    return
                 }
+                assetWriter.add(audioInput)
             }
 
             // 에셋 리더 설정
