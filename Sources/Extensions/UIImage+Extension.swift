@@ -9,6 +9,42 @@ import Foundation
 import UIKit
 
 public extension UIImage {
+    /// 아이콘의 투명 여백을 제외한 도형을 원래 캔버스 중앙으로 옮긴다.
+    /// SF Symbols의 시스템 정렬 정보와 원본 크기·배율은 유지한다.
+    func centeredNavigationIcon() -> UIImage {
+        guard !isSymbolImage, imageOrientation == .up, let cgImage else { return self }
+        let width = cgImage.width
+        let height = cgImage.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(data: buffer.baseAddress, width: width, height: height,
+                                          bitsPerComponent: 8, bytesPerRow: width * 4,
+                                          space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard drawn else { return self }
+        var minX = width, minY = height, maxX = -1, maxY = -1
+        for y in 0..<height {
+            for x in 0..<width where pixels[(y * width + x) * 4 + 3] > 0 {
+                minX = min(minX, x)
+                minY = min(minY, y)
+                maxX = max(maxX, x)
+                maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= minX, maxY >= minY else { return self }
+        let offset = CGPoint(x: CGFloat(width - minX - maxX - 1) / (2 * scale),
+                             y: CGFloat(height - minY - maxY - 1) / (2 * scale))
+        guard offset != .zero else { return self }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            draw(at: offset)
+        }.withRenderingMode(renderingMode)
+    }
+
     static func getSFSymbolImage(name: String, size: CGFloat, weight: UIImage.SymbolWeight, color: UIColor) -> UIImage? {
         let config = UIImage.SymbolConfiguration(pointSize: size, weight: weight)
         let image = UIImage(systemName: name, withConfiguration: config)?.withTintColor(color)

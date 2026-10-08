@@ -60,6 +60,11 @@ public extension UIBarButtonItem {
                                       target: Any,
                                       action: Selector,
                                       buttonSize: CGFloat = 26) -> UIBarButtonItem {
+        if CommonNavigationAppearance.usesSystemButtons {
+            let item = UIBarButtonItem(image: navigationImage(image), style: .plain, target: target, action: action)
+            item.tintColor = CommonNavigationAppearance.buttonTintColor
+            return item
+        }
         let button = UIButton(type: .custom)
         button.setImage(image, for: .normal)
         button.addTarget(target, action: action, for: .touchUpInside)
@@ -76,6 +81,11 @@ public extension UIBarButtonItem {
     static func createUIBarButtonItem(image: UIImage?,
                                       menu: UIMenu,
                                       buttonSize: CGFloat = 26) -> UIBarButtonItem {
+        if CommonNavigationAppearance.usesSystemButtons {
+            let item = UIBarButtonItem(image: navigationImage(image), menu: menu)
+            item.tintColor = CommonNavigationAppearance.buttonTintColor
+            return item
+        }
         let button = UIButton(type: .custom)
         button.setImage(image, for: .normal)
         if #available(iOS 14.0, *) {
@@ -95,11 +105,23 @@ public extension UIBarButtonItem {
         return UIBarButtonItem(customView: button)
     }
 
+    private static func navigationImage(_ image: UIImage?) -> UIImage? {
+        return image?.centeredNavigationIcon().withRenderingMode(.alwaysTemplate)
+    }
+
     static func buttonToBarButtonItem(_ button: UIButton) -> UIBarButtonItem {
         if #available(iOS 15.0, *) {
             var configuration = UIButton.Configuration.plain()
             configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0)
             button.configuration = configuration
+        }
+        if CommonNavigationAppearance.usesSystemButtons {
+            button.tintColor = CommonNavigationAppearance.buttonTintColor
+            for state: UIControl.State in [.normal, .selected, .highlighted, .disabled] {
+                if let image = button.image(for: state) {
+                    button.setImage(navigationImage(image), for: state)
+                }
+            }
         }
         return UIBarButtonItem(customView: button)
     }
