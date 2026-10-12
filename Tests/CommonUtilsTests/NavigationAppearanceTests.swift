@@ -92,13 +92,13 @@ final class NavigationAppearanceTests: XCTestCase {
         detail.hideNavigationLeftButton(hidden: false, target: target, action: #selector(ButtonTarget.tap))
         navigation.popViewController(animated: false)
         root.hideNavigationLeftButton(hidden: false, target: target, action: #selector(ButtonTarget.tap))
+        XCTAssertTrue(detail.navigationItem.leftBarButtonItem?.target as? ButtonTarget === target)
+        XCTAssertTrue(root.navigationItem.leftBarButtonItem?.target as? ButtonTarget === target)
         XCTAssertEqual(detail.navigationItem.leftBarButtonItem?.action, #selector(ButtonTarget.tap))
         XCTAssertEqual(root.navigationItem.leftBarButtonItem?.action, #selector(ButtonTarget.tap))
         XCTAssertTrue(detail.navigationItem.hidesBackButton)
-        if #available(iOS 26.0, *) {
-            XCTAssertEqual(detail.navigationItem.leftBarButtonItem?.accessibilityLabel, "navigation_back".localization(true))
-            XCTAssertEqual(root.navigationItem.leftBarButtonItem?.accessibilityLabel, "navigation_close".localization(true))
-        }
+        XCTAssertEqual(detail.navigationItem.leftBarButtonItem?.accessibilityLabel, "navigation_back".localization(true))
+        XCTAssertEqual(root.navigationItem.leftBarButtonItem?.accessibilityLabel, "navigation_close".localization(true))
         detail.hideNavigationLeftButton(hidden: true)
         XCTAssertNil(detail.navigationItem.leftBarButtonItem)
     }
