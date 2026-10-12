@@ -14,34 +14,23 @@ public extension UINavigationBar {
         fontColor foregroundColor: UIColor,
         font: UIFont,
         largeFont: UIFont? = nil,
-        prefersLargeTitles: Bool = false
+        prefersLargeTitles: Bool = false,
+        style: CommonNavigationBarStyle = .legacy
     ) {
         if #available(iOS 15.0, *) {
-            let appearance = UINavigationBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = backgroundColor
-            appearance.shadowColor = .clear
-            appearance.shadowImage = UIImage() // 명시적으로 빈 이미지 설정
-
-            // 기본 타이틀
-            appearance.titleTextAttributes = [
-                .foregroundColor: foregroundColor,
-                .font: font
-            ]
-
-            // Large title이 켜져 있을 때만 적용
-            if prefersLargeTitles, let largeFont = largeFont {
-                appearance.largeTitleTextAttributes = [
-                    .foregroundColor: foregroundColor,
-                    .font: largeFont
-                ]
-            }
-
-            // Appearance 일괄 적용
+            let appearance = CommonNavigationAppearance.makeAppearance(
+                backgroundColor: backgroundColor,
+                foregroundColor: foregroundColor,
+                font: font,
+                largeFont: prefersLargeTitles ? largeFont : nil,
+                style: style
+            )
             self.standardAppearance = appearance
             self.scrollEdgeAppearance = appearance
-//            self.compactAppearance = appearance
-//            self.compactScrollEdgeAppearance = appearance
+            if style != .legacy {
+                self.compactAppearance = appearance
+                self.compactScrollEdgeAppearance = appearance
+            }
         } else {
             // iOS 14 이하 fallback
             self.titleTextAttributes = [
@@ -62,6 +51,14 @@ public extension UINavigationBar {
             self.setBackgroundImage(UIImage(), for: .default)
         }
         // 공통 설정
+        if #available(iOS 26.0, *), style == .system {
+            self.setBackgroundImage(nil, for: .default)
+            self.shadowImage = nil
+            self.backgroundColor = nil
+            self.barTintColor = nil
+            self.isTranslucent = true
+        }
+        // 텍스트 버튼은 기존 색상을 상속하고 이미지 버튼은 개별 tintColor를 사용한다.
         self.tintColor = foregroundColor
         self.prefersLargeTitles = prefersLargeTitles
     }
