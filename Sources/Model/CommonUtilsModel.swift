@@ -69,6 +69,8 @@ public struct CommonUtilVideoInfo {
 }
 
 public enum CommonUtilCompressionError: Error {
+    case videoTrackNotFound
+    case unsupportedAudioFormat(String)
     case exportSessionFailure(String)
     case unknownError
     case minimumQualityExceedsMaxFileSize(Int64)

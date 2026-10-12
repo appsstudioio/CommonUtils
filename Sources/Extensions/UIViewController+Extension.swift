@@ -107,12 +107,13 @@ public extension UIViewController {
         if hidden {
             self.navigationItem.setLeftBarButton(nil, animated: true)
         } else {
+            let isCloseButton = navigationController?.viewControllers.count == 1 || navigationController == nil
             var backImage: UIImage? = UIImage(named: "actionbar_btn_back", in: Bundle.module, with: nil)?.withRenderingMode(.alwaysTemplate)
             if (self.presentingViewController != nil) {
-                if navigationController?.viewControllers.count == 1 || navigationController == nil {
+                if isCloseButton {
                     backImage = UIImage(named: "actionbar_btn_close", in: Bundle.module, with: nil)?.withRenderingMode(.alwaysTemplate)
                 }
-            } else if navigationController?.viewControllers.count == 1 || navigationController == nil {
+            } else if isCloseButton {
                 backImage = UIImage(named: "actionbar_btn_close", in: Bundle.module, with: nil)?.withRenderingMode(.alwaysTemplate)
             }
             
@@ -123,6 +124,7 @@ public extension UIViewController {
                 target: target,
                 action: action
             )
+            navigationItem.leftBarButtonItem?.accessibilityLabel = (isCloseButton ? "navigation_close" : "navigation_back").localization(true)
         }
     }
 

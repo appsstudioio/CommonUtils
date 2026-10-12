@@ -13,6 +13,48 @@
 
 - 다음 릴리즈에 포함할 변경사항을 이곳에 정리합니다.
 
+## [1.0.18] - 2026-10-12
+
+### 빌드/설정
+
+- 최소 지원 기준을 iOS 15, macOS 12, tvOS 15, watchOS 9로 조정했습니다. UIKit을 사용하는 패키지이므로 다른 플랫폼의 선언만으로 해당 플랫폼의 빌드·실행 지원을 보장하지 않습니다.
+- Swift 도구 버전을 6.4로 상향하고 Swift 언어 모드는 5로 유지했습니다. 소비 앱과 CI도 Swift 6.4 이상의 도구가 필요합니다.
+- SnapKit 최소 버전을 6.0.0, Kingfisher 최소 버전을 8.13.0으로 상향했습니다. Moya 15.0.3, Then 3.0.0, ZIPFoundation 0.9.20의 선언 하한은 유지했습니다.
+- ProgressHUD 의존성을 `uwiseone-ios/ProgressHUD` 포크의 `master` 브랜치로 변경했습니다. 검증 시 사용한 revision은 `a8b101d905f78178bef45c16122be0f16e54aa40`입니다.
+- 간접 의존성은 Alamofire 5.12.2, RxSwift 6.10.2, ReactiveSwift 6.7.0으로 해석해 검증했습니다. ReactiveSwift는 Moya 15.0.3이 허용하는 6.x 범위를 유지했습니다.
+
+### 기능추가
+
+- `DebugLog`에 `externalEventName`을 추가하고 `DebugLoggerManager.externalLogHandler`를 통해 이벤트 이름, 메시지, 레벨, 파라미터와 호출 위치를 소비 앱에 전달할 수 있도록 했습니다. 이벤트를 지정한 로그는 콘솔·파일 기록 설정과 독립적으로 전달됩니다.
+- `CommonNavigationAppearance`와 `CommonNavigationBarStyle`을 추가했습니다. 기본값은 기존 동작을 유지하며, 명시적으로 활성화하면 iOS 26 이상에서 공통 이미지·메뉴 버튼을 시스템 `UIBarButtonItem`으로 생성합니다.
+- 내비게이션바의 기본·시스템·사용자 지정 배경 스타일과 compact appearance 설정을 지원하고, `UIImage.centeredNavigationIcon()`으로 이미지의 투명 여백을 고려한 아이콘 정렬을 추가했습니다.
+- 공유 항목의 알려진 형식에 해당하는 `Data`·`NSData`를 세션별 임시 파일로 준비하고 정리하는 내부 `ActivityShareItemPreparer`를 추가했습니다. 현재 공개 `showActivityViewController`에는 연결되지 않은 내부 유틸리티입니다.
+
+### 버그수정
+
+- 영상 압축에서 비디오 트랙과 오디오 형식 정보를 안전하게 확인하고, AAC 채널 수와 `AVChannelLayoutKey`의 크기·채널 수·레이아웃을 검증하도록 보강했습니다.
+- 다채널 오디오의 유효한 레이아웃을 유지하고, 지원하지 않는 오디오 설정은 writer 구성 전에 `unsupportedAudioFormat` 오류로 반환하도록 했습니다. 압축 입력·다채널 처리·오디오 설정 거부 이벤트도 외부 로그 처리기에 전달합니다.
+- `UIButton.alignTextBelow(spacing:)`가 기존 버튼 설정을 유지하면서 이미지를 제목 위에 배치하도록 수정했습니다.
+- `hideNavigationLeftButton(hidden:target:action:)`의 뒤로·닫기 버튼에 지역화된 접근성 라벨을 설정했습니다. 전달받은 target/action과 기존 아이콘 선택 동작은 유지합니다.
+
+### 테스트
+
+- 외부 로그 전달, 공유 임시 파일 준비·실패 시 원본 유지·정리, 내비게이션 스타일·아이콘 정렬·메뉴·동작 보존에 대한 회귀 테스트를 추가했습니다.
+- 영상 압축의 무음·다채널·잘못된 오디오 설정 경로와 버튼의 이미지·제목 배치 및 기존 설정 보존을 검증했습니다.
+- `testBackAndCloseKeepTheirActions`에서 target/action, 뒤로·닫기 접근성 라벨과 숨김 동작을 확인하도록 보강했습니다. 접근성 라벨 검증은 iOS 26 전용 조건 없이 수행합니다.
+- 날짜·문자열 테스트의 기본 포맷 기대값을 현재 출력에 맞췄습니다. 언어·시간대에 따른 실패 가능성은 아래 검증 제약에 별도로 기록했습니다.
+
+### 문서
+
+- `AGENTS.md`에 공통 라이브러리의 iOS 15 지원, 공개 API 보존, 테스트와 검증 기준을 정리했습니다.
+- README를 현재 패키지 구성, 실제 공개 API, 의존성, 내비게이션 활성화 방법과 테스트·릴리즈 절차에 맞게 다시 작성했습니다.
+
+### 검증 및 남은 제약
+
+- Xcode 27.0 / Swift 6.4 / iPhone 17 Pro Simulator(iOS 26.2)의 로컬 기본 환경에서 전체 462개 테스트가 통과했습니다. iOS 15 기기·시뮬레이터 실행과 소비 앱의 UI·VoiceOver 동작은 별도 검증이 필요합니다.
+- 영어/미국 설정에서는 내비게이션 테스트 11개가 통과했지만, `StringExtensionTests.test_dateFormatChange_withDifferentFormat`은 한국어 월 이름을 고정 기대값으로 사용해 실패하는 것을 재현했습니다. 날짜 테스트에도 KST 입력과 현재 시간대의 차이에 따른 실패 가능성이 남아 있습니다.
+- 현재 PR 테스트 워크플로는 `macos-15`에서 별도의 Xcode 선택 없이 실행합니다. Swift 6.4 이상 도구와 사용 가능한 Simulator를 확인해야 하며, 영상 통합 테스트에는 충분한 디스크 공간이 필요합니다. 이번 버전 문서 작업에서 CI 설정은 변경하지 않았습니다.
+
 ## [1.0.17] - 2026-06-23
 
 ### 빌드/설정

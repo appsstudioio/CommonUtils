@@ -32,26 +32,27 @@ public extension UIButton {
         setAttributedTitle(titleString, for: .normal)
     }
     
-    // https://developer-eungb.tistory.com/30
+    // 기존 버튼 설정을 유지하면서 이미지 아래에 제목을 배치한다.
     func alignTextBelow(spacing: CGFloat = 4.0) {
-        guard let image = self.imageView?.image else {
+        guard imageView?.image != nil, let titleLabel = titleLabel, titleLabel.text != nil else {
             return
         }
 
-        guard let titleLabel = self.titleLabel else {
-            return
+        var configuration = self.configuration ?? .plain()
+        if self.configuration == nil {
+            configuration.contentInsets = .zero
+            if currentAttributedTitle == nil {
+                let font = titleLabel.font
+                configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+                    var attributes = attributes
+                    attributes.font = font
+                    return attributes
+                }
+            }
         }
-
-        guard let titleText = titleLabel.text else {
-            return
-        }
-
-        let titleSize = titleText.size(withAttributes: [
-            NSAttributedString.Key.font: titleLabel.font as Any
-        ])
-
-        titleEdgeInsets = UIEdgeInsets(top: spacing, left: -image.size.width, bottom: -image.size.height, right: 0)
-        imageEdgeInsets = UIEdgeInsets(top: -(titleSize.height + spacing), left: 0, bottom: 0, right: -titleSize.width)
+        configuration.imagePlacement = .top
+        configuration.imagePadding = spacing
+        self.configuration = configuration
     }
 }
 
@@ -60,6 +61,11 @@ public extension UIBarButtonItem {
                                       target: Any,
                                       action: Selector,
                                       buttonSize: CGFloat = 26) -> UIBarButtonItem {
+        if CommonNavigationAppearance.usesSystemButtons {
+            let item = UIBarButtonItem(image: navigationImage(image), style: .plain, target: target, action: action)
+            item.tintColor = CommonNavigationAppearance.buttonTintColor
+            return item
+        }
         let button = UIButton(type: .custom)
         button.setImage(image, for: .normal)
         button.addTarget(target, action: action, for: .touchUpInside)
@@ -76,6 +82,11 @@ public extension UIBarButtonItem {
     static func createUIBarButtonItem(image: UIImage?,
                                       menu: UIMenu,
                                       buttonSize: CGFloat = 26) -> UIBarButtonItem {
+        if CommonNavigationAppearance.usesSystemButtons {
+            let item = UIBarButtonItem(image: navigationImage(image), menu: menu)
+            item.tintColor = CommonNavigationAppearance.buttonTintColor
+            return item
+        }
         let button = UIButton(type: .custom)
         button.setImage(image, for: .normal)
         if #available(iOS 14.0, *) {
@@ -95,11 +106,23 @@ public extension UIBarButtonItem {
         return UIBarButtonItem(customView: button)
     }
 
+    private static func navigationImage(_ image: UIImage?) -> UIImage? {
+        return image?.centeredNavigationIcon().withRenderingMode(.alwaysTemplate)
+    }
+
     static func buttonToBarButtonItem(_ button: UIButton) -> UIBarButtonItem {
         if #available(iOS 15.0, *) {
             var configuration = UIButton.Configuration.plain()
             configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0)
             button.configuration = configuration
+        }
+        if CommonNavigationAppearance.usesSystemButtons {
+            button.tintColor = CommonNavigationAppearance.buttonTintColor
+            for state: UIControl.State in [.normal, .selected, .highlighted, .disabled] {
+                if let image = button.image(for: state) {
+                    button.setImage(navigationImage(image), for: state)
+                }
+            }
         }
         return UIBarButtonItem(customView: button)
     }
